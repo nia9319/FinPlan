@@ -43,6 +43,19 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
+    // 不跳游標的數字輸入元件
+    const NumInput = ({ value, onChange, style, inputMode="numeric" }) => {
+      const [local, setLocal] = React.useState(value===0?"":String(value));
+      React.useEffect(()=>{ setLocal(value===0?"":String(value)); }, [value]);
+      return (
+        <input type="text" inputMode={inputMode}
+          value={local}
+          onChange={e=>{ const v=e.target.value.replace(inputMode==="decimal"?/[^0-9.]/g:/[^0-9]/g,""); setLocal(v); }}
+          onBlur={e=>{ const v=parseFloat(e.target.value); onChange(isNaN(v)?0:v); }}
+          style={style}/>
+      );
+    };
+
     const C = {
       bg: "#f5f2ee", card: "#faf8f5", cardAlt: "#f0ede8",
       border: "#e4dfd8", borderSub: "#ede9e3",
@@ -106,19 +119,26 @@
       </div>
     );
 
-    const NumField = ({ label, value, setter, unit, hint, compact, inputWidth }) => (
+    const NumField = ({ label, value, setter, unit, hint, compact, inputWidth }) => {
+      const [local, setLocal] = React.useState(String(value));
+      React.useEffect(() => { setLocal(String(value)); }, [value]);
+      return (
       <div style={{ marginBottom: compact ? 10 : 14 }}>
         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, alignItems: "flex-end" }}>
           <label style={{ fontSize: compact ? 11 : 13, fontWeight: 600, color: C.text, lineHeight: 1.3 }}>{label}</label>
           {hint && <span style={{ fontSize: 10, color: C.textLight, whiteSpace: "nowrap", marginLeft: 4 }}>{hint}</span>}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <input type="number" value={value} onChange={(e) => setter(Number(e.target.value))}
+          <input type="text" inputMode="decimal"
+            value={local}
+            onChange={e => { const v = e.target.value.replace(/[^0-9.]/g, ''); setLocal(v); }}
+            onBlur={e => { const n = parseFloat(e.target.value); setter(isNaN(n) ? 0 : n); }}
             style={{ width: inputWidth || "auto", flex: inputWidth ? "none" : 1, padding: compact ? "7px 8px" : "9px 13px", fontSize: compact ? 13 : 14, fontWeight: 600, border: `1.5px solid ${C.border}`, borderRadius: 8, color: C.navyDark, outline: "none", background: C.bg, fontFamily: "inherit", minWidth: 0 }} />
           <span style={{ fontSize: compact ? 11 : 12, color: C.textSub, whiteSpace: "nowrap" }}>{unit}</span>
         </div>
       </div>
-    );
+      );
+    };
 
     const Toggle = ({ label, sub, value, setter }) => (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: C.bg, border: `1px solid ${C.borderSub}`, borderRadius: 12, padding: "12px 16px", marginBottom: 10 }}>
@@ -326,8 +346,9 @@
                         <span style={{ fontSize:11, color:C.textSub }}>元</span>
                       </div>
                       <input type="text" inputMode="numeric"
-                        value={item.value === 0 ? "" : item.value}
-                        onChange={e=>{ const v=e.target.value.replace(/[^0-9]/g,""); item.setter(v===""?0:Number(v)); }}
+                        defaultValue={item.value}
+                        key={item.label}
+                        onBlur={e=>{ const v=e.target.value.replace(/[^0-9]/g,""); item.setter(v===""?0:Number(v)); }}
                         style={{ width:"100%", padding:"9px 12px", fontSize:15, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:8, color:C.navyDark, outline:"none", background:C.bg, fontFamily:"inherit" }}/>
                     </div>
                   ))}
@@ -347,8 +368,8 @@
                       <span style={{ fontSize:11, color:C.textSub }}>%</span>
                     </div>
                     <input type="text" inputMode="decimal"
-                      value={inflationRate2 === 0 ? "" : inflationRate2}
-                      onChange={e=>{ const v=e.target.value.replace(/[^0-9.]/g,""); setInflationRate2(v===""?0:Number(v)); }}
+                      defaultValue={inflationRate2}
+                      onBlur={e=>{ const v=parseFloat(e.target.value); setInflationRate2(isNaN(v)?2:v); }}
                       style={{ width:"100%", padding:"9px 12px", fontSize:15, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:8, color:C.navyDark, outline:"none", background:C.bg, fontFamily:"inherit" }}/>
                   </div>
 
@@ -654,8 +675,7 @@
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:`1px solid ${C.borderSub}` }}>
           <span style={{ fontSize:13, color:C.text }}>{label}</span>
           <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-            <input type="number" value={value||""} onChange={e=>onChange(Number(e.target.value)||0)}
-              style={{ width:100, padding:"5px 8px", fontSize:13, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:7, color:C.navyDark, textAlign:"right", outline:"none", background:C.bg, fontFamily:"inherit" }}/>
+            <NumInput value={value||0} onChange={onChange} style={{ width:100, padding:"5px 8px", fontSize:13, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:7, color:C.navyDark, textAlign:"right", outline:"none", background:C.bg, fontFamily:"inherit" }}/>
             <span style={{ fontSize:11, color:C.textSub }}>元</span>
           </div>
         </div>
@@ -834,8 +854,7 @@
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:`1px solid ${C.borderSub}` }}>
           <span style={{ fontSize:13, color:C.text }}>{label}</span>
           <div style={{ display:"flex", alignItems:"center", gap:4 }}>
-            <input type="number" value={value||""} onChange={e=>onChange(Number(e.target.value)||0)}
-              style={{ width:110, padding:"5px 8px", fontSize:13, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:7, color:C.navyDark, textAlign:"right", outline:"none", background:C.bg, fontFamily:"inherit" }}/>
+            <NumInput value={value||0} onChange={onChange} style={{ width:110, padding:"5px 8px", fontSize:13, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:7, color:C.navyDark, textAlign:"right", outline:"none", background:C.bg, fontFamily:"inherit" }}/>
             <span style={{ fontSize:11, color:C.textSub }}>元</span>
           </div>
         </div>
@@ -1046,23 +1065,26 @@
 
       useEffect(()=>{ calculate(); }, []);
 
-      const SliderRow = ({ label, value, setter, min, max, step=1, unit="萬元", sub }) => (
+      const SliderRow = ({ label, value, setter, min, max, step=1, unit="萬元", sub }) => {
+        const [local, setLocal] = React.useState(String(value));
+        React.useEffect(()=>{ setLocal(String(value)); }, [value]);
+        return (
         <div style={{ marginBottom:14 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:4 }}>
             <div>
               <span style={{ fontSize:14, fontWeight:600, color:C.text }}>{label}</span>
               {sub && <div style={{ fontSize:10, color:C.textLight }}>{sub}</div>}
             </div>
-            <span style={{ fontSize:16, fontWeight:700, color:C.navyDark }}>{value} {unit}</span>
+            <span style={{ fontSize:11, color:C.textSub }}>{unit}</span>
           </div>
-          <input type="range" min={min} max={max} step={step} value={value}
-            onChange={e=>{ setter(Number(e.target.value)); }}
-            style={{ width:"100%", accentColor:C.navyDark, cursor:"pointer" }}/>
-          <div style={{ display:"flex", justifyContent:"space-between", fontSize:10, color:C.textLight, marginTop:2 }}>
-            <span>{min}</span><span>{max}</span>
-          </div>
+          <input type="text" inputMode="decimal"
+            value={local}
+            onChange={e=>{ const v=e.target.value.replace(/[^0-9.]/g,''); setLocal(v); }}
+            onBlur={e=>{ const v=parseFloat(e.target.value); setter(isNaN(v)?0:v); }}
+            style={{ width:"100%", padding:"9px 12px", fontSize:15, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:8, color:C.navyDark, outline:"none", background:C.bg, fontFamily:"inherit" }}/>
         </div>
-      );
+        );
+      };
 
       const StepperRow = ({ label, value, setter, max=10, sub }) => (
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 0", borderBottom:`1px solid ${C.borderSub}` }}>
@@ -1327,8 +1349,7 @@
             {rec && <span style={{ fontSize:10, color:C.textLight }}>建議：{rec.toLocaleString()}</span>}
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-            <input type="number" value={value||""} onChange={e=>{ setter(Number(e.target.value)||0); }}
-              style={{ flex:1, padding:"7px 10px", fontSize:13, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:8, color:C.navyDark, outline:"none", background:C.bg, fontFamily:"inherit" }}/>
+            <NumInput value={value||0} onChange={setter} style={{ flex:1, padding:"7px 10px", fontSize:13, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:8, color:C.navyDark, outline:"none", background:C.bg, fontFamily:"inherit" }}/>
             <span style={{ fontSize:11, color:C.textSub, whiteSpace:"nowrap" }}>{unit}</span>
           </div>
         </div>
@@ -1567,7 +1588,10 @@
         return rows;
       };
 
-      const NF = ({ label, value, setter, unit="萬", sub, readOnly=false }) => (
+      const NF = ({ label, value, setter, unit="萬", sub, readOnly=false }) => {
+        const [local, setLocal] = React.useState(String(value));
+        React.useEffect(()=>{ setLocal(String(value)); }, [value]);
+        return (
         <div style={{ marginBottom:12 }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:4 }}>
             <div>
@@ -1577,11 +1601,13 @@
             <span style={{ fontSize:11, color:C.textSub }}>{unit}</span>
           </div>
           <input type="text" inputMode="decimal" readOnly={readOnly}
-            value={value}
-            onChange={e=>{ if(!readOnly){ const v=e.target.value.replace(/[^0-9.]/g,''); setter(v===''?0:Number(v)); }}}
+            value={local}
+            onChange={e=>{ if(!readOnly){ const v=e.target.value.replace(/[^0-9.]/g,''); setLocal(v); }}}
+            onBlur={e=>{ if(!readOnly){ const v=parseFloat(e.target.value); setter(isNaN(v)?0:v); }}}
             style={{ width:"100%", padding:"9px 12px", fontSize:15, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:8, color:readOnly?C.textSub:C.navyDark, outline:"none", background:readOnly?"#f5f5f3":C.bg, fontFamily:"inherit" }}/>
         </div>
-      );
+        );
+      };
 
       return (
         <div style={{ maxWidth:960, margin:"0 auto", padding:"20px 16px" }}>
