@@ -292,13 +292,7 @@
                   <NumField label="目前月薪" value={salary} setter={handleSalaryChange} unit="元"
                     hint={salary > PENSION_CAP ? "超上限，以15萬計" : null} />
 
-                  {result && (
-                    <div style={{ background: C.lavBg, border: `1px solid #d8d2e8`, borderRadius: 10, padding: "10px 14px", fontSize: 12, color: C.lavender, marginTop: 4 }}>
-                      退休當年（{retireAge} 歲）每月實際需求：
-                      <b style={{ color: C.navyDeep, fontSize: 14 }}> NT$ {fmt(result.adjustedMonthlyNeed)}</b>
-                      <span style={{ color: C.textLight, marginLeft: 6 }}>（×{result.inflationFactor.toFixed(2)} 倍通膨調整）</span>
-                    </div>
-                  )}
+
                 </div>
 
                 <div style={cardStyle}>
@@ -375,10 +369,17 @@
                   </div>
 
                   {/* 合計顯示 */}
-                  <div style={{ background:C.navyDeep, borderRadius:10, padding:"12px 16px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                  <div style={{ background:C.navyDeep, borderRadius:10, padding:"12px 16px", display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:10 }}>
                     <span style={{ fontSize:13, color:"#a8bece" }}>每月退休需求（當前幣值）</span>
                     <span style={{ fontSize:20, fontWeight:800, color:"#eee8e0" }}>NT$ {monthlyNeed.toLocaleString()}</span>
                   </div>
+                  {result && (
+                    <div style={{ background:C.lavBg, border:`1px solid #d8d2e8`, borderRadius:10, padding:"12px 16px", fontSize:13, color:C.lavender }}>
+                      退休當年（<b style={{color:C.navyDeep}}>{retireAge}</b> 歲）每月實際需求：
+                      <b style={{ color:C.navyDeep, fontSize:16 }}> NT$ {fmt(result.adjustedMonthlyNeed)}</b>
+                      <div style={{ fontSize:11, color:C.textLight, marginTop:3 }}>已依通膨率 {inflationRate2}% 調整 ×{result.inflationFactor.toFixed(2)} 倍</div>
+                    </div>
+                  )}
                 </div>
 
                 <button onClick={calculate}
@@ -503,8 +504,7 @@
                       ＊退休每月需求已依通膨率（{inflationRate2}%）換算為退休當年名目金額。<br />
                       ＊勞退提繳工資上限 NT$150,000；勞保投保薪資上限 NT$45,800。<br />
                       ＊月退試算以帳戶總額除以月數（實際依勞保局公告保證收益率）。<br />
-                      ＊本試算為概估，建議搭配完整 PC 財務需求分析使用。<br />
-                      ＊<span style={{ color: C.roseDark, fontWeight: 500 }}>以上所有數據均為試算參考值，實際給付金額以勞動部勞工保險局正式核定為準，建議定期至勞保局 e 化服務系統確認個人帳戶資料。</span>
+                                            ＊<span style={{ color: C.roseDark, fontWeight: 500 }}>以上所有數據均為試算參考值，實際給付金額以勞動部勞工保險局正式核定為準，建議定期至勞保局 e 化服務系統確認個人帳戶資料。</span>
                     </div>
                   </>
                 )}
@@ -1283,7 +1283,7 @@
                       {result.tax >= 500 && <div>・遺產稅額較高，建議提早規劃生前贈與（每年每人免稅額 244 萬元）</div>}
                       <div>・分紅壽險可作為「稅源預留」工具，保險理賠金不計入遺產，是高資產族群的重要規劃工具</div>
                       <div>・夫妻間贈與免稅，可善用配偶財產規劃降低遺產總額</div>
-                      {result.taxable && <div>・建議尋求 CFP® 專業顧問進行完整的傳承規劃評估</div>}
+                      
                     </div>
                   </div>
 
@@ -1308,7 +1308,7 @@
       const [ward, setWard] = useState(0);          // 病房費/日
       const [ltc, setLtc] = useState(0);            // 失能長照/月
       const [oop, setOop] = useState(0);            // 實支實付/次
-      const [critical, setCritical] = useState(0); // 重大疾病/次
+      const [critical, setCritical] = useState(0); // 重大傷病/次
       const [accident, setAccident] = useState(0); // 意外
       const [lifeIns, setLifeIns] = useState(0);   // 壽險總額
       const [liquidAssets, setLiquidAssets] = useState(0);
@@ -1422,7 +1422,7 @@
                 <InputRow label="病房費補貼（日額）" value={ward} setter={setWard} unit="元/日" rec={REC_WARD} sub="建議每日 5,000 元以上"/>
                 <InputRow label="失能長照（月給付）" value={ltc} setter={setLtc} unit="元/月" rec={REC_LTC} sub="建議每月 3 萬元或月收入"/>
                 <InputRow label="實支實付（每次上限）" value={oop} setter={setOop} unit="元" rec={REC_OOP} sub="建議 30 萬以上，建議雙實支"/>
-                <InputRow label="重大疾病・癌症" value={critical} setter={setCritical} unit="元" rec={REC_CRITICAL} sub="建議 200 萬元以上含療程費"/>
+                <InputRow label="重大傷病・癌症" value={critical} setter={setCritical} unit="元" rec={REC_CRITICAL} sub="建議 200 萬元以上含療程費"/>
                 <InputRow label="意外保障" value={accident} setter={setAccident} unit="元" sub="意外套餐"/>
               </div>
 
@@ -1489,7 +1489,7 @@
                     <GapRow label="病房費補貼" current={ward} rec={REC_WARD} unit="元/日"/>
                     <GapRow label="失能長照" current={ltc} rec={REC_LTC} unit="元/月"/>
                     <GapRow label="實支實付" current={oop} rec={REC_OOP}/>
-                    <GapRow label="重大疾病・癌症" current={critical} rec={REC_CRITICAL}/>
+                    <GapRow label="重大傷病・癌症" current={critical} rec={REC_CRITICAL}/>
                   </div>
 
                   {/* 壽險缺口 */}
@@ -1529,18 +1529,15 @@
                   <div style={{ background:C.sandBg, border:`1px solid #e8d8c4`, borderRadius:14, padding:"16px 18px" }}>
                     <div style={{ fontSize:13, fontWeight:700, color:C.sandDark, marginBottom:10 }}>💡 規劃建議</div>
                     <div style={{ fontSize:12, color:C.text, lineHeight:2 }}>
-                      {result.ltcGap>0 && <div>・長照缺口是最容易被忽略的風險，建議優先規劃失能扶助險</div>}
-                      {result.criticalGap>0 && <div>・重大傷病費用龐大，建議確認重大疾病險與癌症險的保額</div>}
-                      {result.oopGap>0 && <div>・建議補強實支實付，雙實支設計可大幅降低自費醫療負擔</div>}
-                      {result.lifeGap>0 && <div>・壽險缺口較大，建議以定期壽險補強，保費低、保額高</div>}
+                      {result.criticalGap>0 && <div>・重大傷病費用龐大，建議優先規劃</div>}
+                      {result.ltcGap>0 && <div>・長照缺口是最容易被忽略的風險，建議逐年規劃至足額</div>}
+                      {result.oopGap>0 && <div>・補強實支實付，若已有雙實支規劃務必保留</div>}
+                      {result.lifeGap>0 && <div>・壽險缺口，建議以定期壽險（保費低、保障高）或投資型壽險（費率低、繳費彈性）補強</div>}
                       {result.score>=80 && <div>・整體保障完整，建議每 2～3 年進行一次保單健檢，確保保障與生活需求同步</div>}
                     </div>
                   </div>
 
-                  <div style={{ fontSize:10, color:C.textLight, lineHeight:1.8 }}>
-                    ＊本診斷依據 54321 完善醫療保障原則試算，實際保障需求依個人狀況而異。<br/>
-                    ＊建議搭配完整保單健檢與財務需求分析（PC）使用。
-                  </div>
+
                 </>
               )}
             </div>
