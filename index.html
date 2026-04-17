@@ -263,6 +263,10 @@
       };
 
       useEffect(() => { calculate(); }, []);
+      // 退休需求或通膨率改變時即時重算結果
+      useEffect(() => {
+        if (result) calculate();
+      }, [monthlyNeed, inflationRate2]);
 
       return (
         <div style={{ minHeight: "100vh", background: C.bg, color: C.text }}>
@@ -332,12 +336,12 @@
                       setter:(v)=>{ setNeedQuality(v); updateMonthlyNeed(needBasic,v,needMedical,needLTC,needReplacement,needSpecial); }},
                     { label:"醫療費用", sub:"門診、藥費、健檢、自費醫療", value:needMedical,
                       setter:(v)=>{ setNeedMedical(v); updateMonthlyNeed(needBasic,needQuality,v,needLTC,needReplacement,needSpecial); }},
-                    { label:"長照費用", sub:"固定計算 120 個月（10 年）", value:needLTC,
-                      setter:(v)=>{ setNeedLTC(v); updateMonthlyNeed(needBasic,needQuality,needMedical,v,needReplacement,needSpecial); }},
                     { label:"重大更換預備金", sub:"家具、家電、汽車等大額支出（月均）", value:needReplacement,
                       setter:(v)=>{ setNeedReplacement(v); updateMonthlyNeed(needBasic,needQuality,needMedical,needLTC,v,needSpecial); }},
                     { label:"特別費用", sub:"子孫贊助、購屋、其他大額規劃（月均）", value:needSpecial,
                       setter:(v)=>{ setNeedSpecial(v); updateMonthlyNeed(needBasic,needQuality,needMedical,needLTC,needReplacement,v); }},
+                    { label:"長照費用", sub:"固定計算 120 個月（10 年）", value:needLTC,
+                      setter:(v)=>{ setNeedLTC(v); updateMonthlyNeed(needBasic,needQuality,needMedical,v,needReplacement,needSpecial); }},
                   ].map(item => (
                     <div key={item.label} style={{ marginBottom:12 }}>
                       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-end", marginBottom:4 }}>
@@ -1142,11 +1146,11 @@
                         <div style={{ fontSize:14, fontWeight:600, color:C.text }}>遺產總額</div>
                         <div style={{ fontSize:10, color:C.textLight }}>含死亡前2年內贈與繼承人之財產</div>
                       </div>
-                      <span style={{ fontSize:11, color:C.textSub }}>元</span>
+                      <span style={{ fontSize:11, color:C.textSub }}>萬元</span>
                     </div>
-                    <NumInput value={estate*10000} onChange={v=>setEstate(Math.round(v/10000))}
+                    <NumInput value={estate} onChange={v=>setEstate(v)}
                       style={{ width:"100%", padding:"9px 12px", fontSize:15, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:8, color:C.navyDark, outline:"none", background:C.bg, fontFamily:"inherit" }}/>
-                    <div style={{ fontSize:11, color:C.textLight, marginTop:3 }}>= {(estate).toLocaleString()} 萬</div>
+                    <div style={{ fontSize:11, color:C.textLight, marginTop:3 }}>= {(estate*10000).toLocaleString()} 元</div>
                   </div>
               </div>
 
@@ -1167,9 +1171,9 @@
                 <div style={{ marginBottom:14 }}>
                     <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
                       <span style={{ fontSize:14, fontWeight:600, color:C.text }}>未償債務</span>
-                      <span style={{ fontSize:11, color:C.textSub }}>元</span>
+                      <span style={{ fontSize:11, color:C.textSub }}>萬元</span>
                     </div>
-                    <NumInput value={debt*10000} onChange={v=>setDebt(Math.round(v/10000))}
+                    <NumInput value={debt} onChange={v=>setDebt(v)}
                       style={{ width:"100%", padding:"9px 12px", fontSize:15, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:8, color:C.navyDark, outline:"none", background:C.bg, fontFamily:"inherit" }}/>
                     <div style={{ fontSize:10, color:C.textLight, marginTop:3 }}>具有確實證明之債務</div>
                   </div>
@@ -1178,9 +1182,9 @@
                   <div style={{ marginBottom:14 }}>
                         <div style={{ display:"flex", justifyContent:"space-between", marginBottom:4 }}>
                           <span style={{ fontSize:14, fontWeight:600, color:C.text }}>財產金額</span>
-                          <span style={{ fontSize:11, color:C.textSub }}>元</span>
+                          <span style={{ fontSize:11, color:C.textSub }}>萬元</span>
                         </div>
-                        <NumInput value={prevInherited * 10000} onChange={v=>setPrevInherited(Math.round(v/10000))}
+                        <NumInput value={prevInherited} onChange={v=>setPrevInherited(v)}
                           style={{ width:"100%", padding:"9px 12px", fontSize:15, fontWeight:600, border:`1.5px solid ${C.border}`, borderRadius:8, color:C.navyDark, outline:"none", background:C.bg, fontFamily:"inherit" }}/>
                       </div>
                   {prevInherited > 0 && (
