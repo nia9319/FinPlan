@@ -1882,6 +1882,333 @@
     }
 
     // ── 主 APP（多頁路由）────────────────────────────────
+    // ── 理財：財務階段檢視 ───────────────────────────────────
+    const MATURITY_LEVELS = [
+      { key:'flow', name:'流量（金流）', rpg:'生存者 Survivor', task:'建立收支管理、緊急預備金、現金流分析、收入來源整理',
+        questions:[
+          '我有至少 6 個月生活費的緊急預備金',
+          '每個月的收入都有固定結餘，不是花光',
+          '我清楚知道自己的收支狀況（有記帳或掌握金流）',
+          '我沒有信用卡循環利息或高利率負債',
+          '我已經有規劃或開始建立第二收入來源',
+        ]},
+      { key:'asset', name:'存量（資產）', rpg:'累積者 Accumulator', task:'建立資產負債表、資產配置、掌握資產累積速度',
+        questions:[
+          '我清楚知道自己目前的淨資產（資產減負債）',
+          '我的淨資產每年都在穩定增加，而不是原地踏步',
+          '我對存款、股票、基金等資產有基本的配置概念',
+          '我或家庭有一份完整的資產負債表',
+          '我的負債（房貸等）在合理可控的範圍內',
+        ]},
+      { key:'protect', name:'保障（防火牆）', rpg:'守護者 Protector', task:'建立醫療、重疾、長照、壽險與家庭責任保障',
+        questions:[
+          '如果收入中斷 3～6 個月，家庭生活仍能維持',
+          '如果罹患重大疾病，家庭財務不會因此崩潰',
+          '我已經有長期照顧（長照）的規劃',
+          '我的壽險保額足以承擔家庭責任（房貸、子女教養等）',
+          '我每年都會重新檢視一次保障內容是否足夠',
+        ]},
+      { key:'invest', name:'投資', rpg:'成長者 Investor', task:'建立資產配置紀律，讓資產開始替你工作',
+        questions:[
+          '我已經有股票、基金或 ETF 等投資部位',
+          '我每年會檢視並調整一次資產配置',
+          '我的投資決策有紀律，不會隨市場情緒進出',
+          '我了解自己的風險承受度，並依此配置資產',
+          '我的被動收入（股息、利息等）正在持續累積',
+        ]},
+      { key:'property', name:'房產', rpg:'配置者 Allocator', task:'釐清房產在整體資產配置中是資產還是負債',
+        questions:[
+          '我清楚知道自己名下的房產，究竟是資產還是負債',
+          '我的房貸條件（利率、年限）有定期檢視與優化',
+          '我了解房地合一稅等相關的房產稅務規定',
+          '我對自住 / 置產 / 活化有明確的房產策略',
+          '房產支出不會拖垮我整體的現金流健康',
+        ]},
+      { key:'retire', name:'退休', rpg:'自由者 Freedom', task:'建立現金流退休、提領率、通膨與年金規劃',
+        questions:[
+          '我已經估算過退休後每個月需要多少生活費',
+          '我有規劃退休後資產的提領率與現金流來源',
+          '我的退休規劃有把通膨因素考慮進去',
+          '我已經配置年金或其他長期穩定的現金流工具',
+          '我知道自己目前距離「財務自由」還差多少',
+        ]},
+      { key:'legacy', name:'稅務與傳承', rpg:'傳承者 Legacy', task:'規劃所得、贈與、遺產與家族傳承',
+        questions:[
+          '我了解自己適用的所得稅級距，並知道基本節稅工具',
+          '我對贈與稅與遺產稅有基本的規劃概念',
+          '我了解保險在財富傳承中可以扮演的角色',
+          '我有信託或家族傳承的初步規劃',
+          '我的財富傳承目標，已經和家人溝通清楚',
+        ]},
+    ];
+    const MATURITY_TOTAL_Q = MATURITY_LEVELS.length * 5;
+    function maturityLevelIndexOf(qIdx){ return Math.floor(qIdx/5); }
+
+    function MaturityScoreRing({ pct, color, size=90, label }) {
+      const r = (size/2) - 7;
+      const circumference = 2*Math.PI*r;
+      return (
+        <div style={{ position:"relative", width:size, height:size, flexShrink:0 }}>
+          <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+            <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={C.border} strokeWidth="8"/>
+            <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth="8"
+              strokeDasharray={`${circumference*pct/100} ${circumference}`}
+              strokeLinecap="round" transform={`rotate(-90 ${size/2} ${size/2})`}
+              style={{transition:"stroke-dasharray 0.6s ease"}}/>
+          </svg>
+          <div style={{ position:"absolute", top:"50%", left:"50%", transform:"translate(-50%,-50%)", textAlign:"center" }}>
+            <div style={{ fontSize:24, fontWeight:800, color, lineHeight:1 }}>{Math.round(pct)}</div>
+            <div style={{ fontSize:11, color:C.textSub }}>{label || "%"}</div>
+          </div>
+        </div>
+      );
+    }
+
+    function MaturityTopBar({ qIdx, onBack, showBack }) {
+      const pct = Math.round((qIdx/MATURITY_TOTAL_Q)*100);
+      return (
+        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:16 }}>
+          {showBack ? (
+            <button onClick={onBack}
+              style={{ padding:"6px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.bg, color:C.navyDark, fontSize:12, fontWeight:600, cursor:"pointer", whiteSpace:"nowrap" }}>
+              ← 上一題
+            </button>
+          ) : <div style={{ width:64 }} />}
+          <div style={{ flex:1 }}>
+            <div style={{ height:5, background:C.border, borderRadius:3, overflow:"hidden" }}>
+              <div style={{ width:`${pct}%`, height:"100%", background:C.navyDeep, borderRadius:3, transition:"width 0.35s ease" }}/>
+            </div>
+          </div>
+          <div style={{ fontSize:11, color:C.textSub, whiteSpace:"nowrap" }}>{Math.min(qIdx+1,MATURITY_TOTAL_Q)} / {MATURITY_TOTAL_Q}</div>
+        </div>
+      );
+    }
+
+    function FinancialMaturityQuiz({ clientName }) {
+      const [phase, setPhase] = useState("intro"); // intro | question | levelComplete | results
+      const [qIdx, setQIdx] = useState(0);
+      const [answers, setAnswers] = useState(Array(MATURITY_TOTAL_Q).fill(null));
+
+      const li = maturityLevelIndexOf(qIdx);
+      const level = MATURITY_LEVELS[li];
+      const qi = qIdx % 5;
+
+      const levelScore = (levelIdx) => {
+        const slice = answers.slice(levelIdx*5, levelIdx*5+5);
+        return slice.filter(a => a === true).length;
+      };
+
+      const handleAnswer = (val) => {
+        const next = [...answers];
+        next[qIdx] = val;
+        setAnswers(next);
+        if (qi === 4) {
+          setPhase("levelComplete");
+        } else {
+          setQIdx(qIdx+1);
+        }
+      };
+
+      const continueAfterLevel = () => {
+        if (li === MATURITY_LEVELS.length-1) {
+          setPhase("results");
+        } else {
+          setQIdx(qIdx+1);
+          setPhase("question");
+        }
+      };
+
+      const goBack = () => {
+        if (phase === "levelComplete") {
+          setPhase("question");
+          return;
+        }
+        if (qIdx > 0) {
+          setQIdx(qIdx-1);
+          setPhase("question");
+        }
+      };
+
+      const restart = () => {
+        setAnswers(Array(MATURITY_TOTAL_Q).fill(null));
+        setQIdx(0);
+        setPhase("intro");
+      };
+
+      return (
+        <div style={{ maxWidth:640, margin:"0 auto", padding:"24px 16px 16px" }}>
+
+          {clientName && (
+            <div style={{ background:C.lavBg, border:"1px solid #d8d2e8", borderRadius:10, padding:"8px 16px", marginBottom:16, display:"flex", alignItems:"center", gap:8 }}>
+              <span style={{ fontSize:12, color:C.lavender }}>👤 客戶</span>
+              <span style={{ fontSize:15, fontWeight:700, color:C.navyDeep }}>{clientName}</span>
+              <span style={{ fontSize:11, color:C.textLight, marginLeft:"auto" }}>財務階段檢視</span>
+            </div>
+          )}
+
+          {phase === "intro" && (
+            <div style={cardStyle}>
+              <div style={{ display:"flex", flexDirection:"column", gap:10, marginBottom:24 }}>
+                {MATURITY_LEVELS.map((lv,i) => (
+                  <div key={lv.key} style={{ display:"flex", alignItems:"center", gap:10, background:C.bg, border:`1px solid ${C.borderSub}`, borderRadius:10, padding:"11px 14px" }}>
+                    <div style={{ background:C.navyDeep, color:"#eee8e0", borderRadius:6, padding:"2px 8px", fontSize:12, fontWeight:700 }}>Lv{i+1}</div>
+                    <div style={{ fontSize:15, fontWeight:600, color:C.text }}>{lv.name}</div>
+                    <div style={{ fontSize:13, color:C.textLight, marginLeft:"auto" }}>{lv.rpg}</div>
+                  </div>
+                )).reverse()}
+              </div>
+              <button onClick={()=>{ setPhase("question"); setQIdx(0); }}
+                style={{ width:"100%", padding:"14px", background:C.navyDeep, border:"none", borderRadius:12, color:"#eee8e0", fontSize:17, fontWeight:700, letterSpacing:"0.1em", cursor:"pointer" }}>
+                開始測驗
+              </button>
+            </div>
+          )}
+
+          {phase === "question" && (
+            <div>
+              <MaturityTopBar qIdx={qIdx} onBack={goBack} showBack={qIdx>0} />
+              <div style={cardStyle}>
+                <div style={{ display:"flex", gap:10, marginBottom:16, alignItems:"flex-start" }}>
+                  <div style={{ background:C.navyDeep, color:"#eee8e0", borderRadius:6, padding:"2px 8px", fontSize:12, fontWeight:700, whiteSpace:"nowrap", marginTop:2 }}>
+                    Lv{li+1}．{level.name}
+                  </div>
+                  <div style={{ fontSize:13, color:C.textLight, marginLeft:"auto", whiteSpace:"nowrap" }}>第 {qi+1} / 5 題</div>
+                </div>
+                <div style={{ fontSize:19, fontWeight:700, color:C.text, lineHeight:1.7, marginBottom:22, minHeight:70 }}>
+                  {level.questions[qi]}
+                </div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                  <button onClick={()=>handleAnswer(true)}
+                    style={{ padding:"16px 14px", borderRadius:10, border:`1.5px solid ${answers[qIdx]===true ? C.navyDark : C.border}`, background:answers[qIdx]===true ? C.navyDeep : C.bg, color:answers[qIdx]===true ? "#eee8e0" : C.text, fontSize:16, fontWeight:700, cursor:"pointer", transition:"all 0.15s" }}>
+                    符合
+                  </button>
+                  <button onClick={()=>handleAnswer(false)}
+                    style={{ padding:"16px 14px", borderRadius:10, border:`1.5px solid ${answers[qIdx]===false ? C.roseDark : C.border}`, background:answers[qIdx]===false ? C.roseBg : C.bg, color:answers[qIdx]===false ? C.roseDark : C.text, fontSize:16, fontWeight:700, cursor:"pointer", transition:"all 0.15s" }}>
+                    不符合
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {phase === "levelComplete" && (() => {
+            const score = levelScore(li);
+            const passed = score >= 4;
+            const pct = score/5*100;
+            const color = passed ? C.sageDark : C.roseDark;
+            const bg = passed ? C.sageBg : C.roseBg;
+            const border = passed ? "#c0d4c4" : "#ddc8c8";
+            return (
+              <div>
+                <MaturityTopBar qIdx={qIdx} onBack={goBack} showBack={true} />
+                <div style={{ background:bg, border:`1.5px solid ${border}`, borderRadius:16, padding:"28px 26px", boxShadow:"0 2px 8px rgba(100,90,80,0.08)" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:20, marginBottom:18 }}>
+                    <MaturityScoreRing pct={pct} color={color} label="分" />
+                    <div>
+                      <div style={{ fontSize:13, color:C.textSub, marginBottom:4, letterSpacing:"0.06em" }}>LEVEL {li+1} 結果</div>
+                      <div style={{ fontSize:22, fontWeight:800, color, marginBottom:6 }}>{passed ? "通關" : "尚未達標"}：{level.name}</div>
+                      <div style={{ fontSize:14, color:C.text }}>{score} / 5 題符合</div>
+                    </div>
+                  </div>
+                  <div style={{ background:"rgba(255,255,255,0.55)", borderRadius:10, padding:"12px 16px", fontSize:14.5, color:C.textSub, lineHeight:1.85, marginBottom:20 }}>
+                    {passed
+                      ? `你在「${level.name}」具備晉升下一等級的基礎。`
+                      : `你在「${level.name}」還沒有穩固到可以往上蓋下一層。核心任務：${level.task}。先把這一層做好，比急著往上更重要。`}
+                  </div>
+                  <button onClick={continueAfterLevel}
+                    style={{ width:"100%", padding:"14px", background:C.navyDeep, border:"none", borderRadius:12, color:"#eee8e0", fontSize:16, fontWeight:700, letterSpacing:"0.08em", cursor:"pointer" }}>
+                    {li === MATURITY_LEVELS.length-1 ? "查看完整結果" : "繼續下一等級"}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {phase === "results" && (() => {
+            let finalLevelIdx = -1;
+            for (let i=0;i<MATURITY_LEVELS.length;i++){
+              if (levelScore(i) >= 4) finalLevelIdx = i;
+              else break;
+            }
+            const stuckAt = finalLevelIdx+1 < MATURITY_LEVELS.length ? finalLevelIdx+1 : null;
+            const totalScore = answers.filter(a=>a===true).length;
+            const overallPct = totalScore/MATURITY_TOTAL_Q*100;
+            const overallColor = overallPct>=80 ? C.sageDark : overallPct>=50 ? C.sand : C.roseDark;
+
+            return (
+              <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                <div style={cardStyle}>
+                  <div style={{ display:"flex", alignItems:"center", gap:20, marginBottom:8 }}>
+                    <MaturityScoreRing pct={overallPct} color={overallColor} size={90} label="分" />
+                    <div>
+                      <div style={{ fontSize:13, color:C.textSub, marginBottom:4, letterSpacing:"0.06em" }}>目前等級</div>
+                      <div style={{ fontSize:26, fontWeight:800, color:overallColor, marginBottom:6 }}>
+                        {finalLevelIdx>=0 ? `Lv${finalLevelIdx+1}．${MATURITY_LEVELS[finalLevelIdx].rpg}` : "尚未穩固 Lv1"}
+                      </div>
+                      <div style={{ fontSize:14, color:C.text }}>總分 {totalScore} / {MATURITY_TOTAL_Q}</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={cardStyle}>
+                  <div style={{ fontSize:15, fontWeight:700, color:C.navyDeep, marginBottom:14 }}>七個等級分數</div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                    {MATURITY_LEVELS.map((lv,i) => {
+                      const s = levelScore(i);
+                      const p = s/5*100;
+                      const reached = i <= finalLevelIdx || (stuckAt!==null && i===stuckAt);
+                      return (
+                        <div key={lv.key} style={{ display:"grid", gridTemplateColumns:"84px 1fr 34px", gap:10, alignItems:"center", opacity: reached ? 1 : 0.45 }}>
+                          <div style={{ fontSize:14, fontWeight:700, color:C.navyDark }}>Lv{i+1}．{lv.name.split("（")[0]}</div>
+                          <div style={{ height:6, background:C.border, borderRadius:3, overflow:"hidden" }}>
+                            <div style={{ width:`${p}%`, height:"100%", background:p>=80?C.sageDark:p>=50?C.sand:C.roseDark, borderRadius:3, transition:"width 0.8s ease" }}/>
+                          </div>
+                          <div style={{ fontSize:13, color:C.textSub, textAlign:"right" }}>{s}/5</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div style={{ background:C.sandBg, border:"1px solid #e8d8c4", borderRadius:14, padding:"18px 20px" }}>
+                  <div style={{ fontSize:13, color:C.sandDark, fontWeight:700, letterSpacing:"0.06em", marginBottom:8 }}>下一步建議</div>
+                  {finalLevelIdx === MATURITY_LEVELS.length-1 ? (
+                    <>
+                      <div style={{ fontSize:17, fontWeight:800, color:C.navyDeep, marginBottom:8 }}>恭喜，你已經走完全部七個等級</div>
+                      <p style={{ fontSize:15, color:C.text, lineHeight:1.85 }}>
+                        從流量、資產、保障、投資、房產、退休到稅務與傳承，你的財務基礎已經相當完整。真正有錢的人接下來研究的，是如何讓財富有效率地留下來、傳下去。
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{ fontSize:17, fontWeight:800, color:C.navyDeep, marginBottom:8 }}>
+                        先把「{MATURITY_LEVELS[stuckAt].name}」這一層蓋穩
+                      </div>
+                      <p style={{ fontSize:15, color:C.text, lineHeight:1.85 }}>
+                        你目前卡在 <b>Lv{stuckAt+1}．{MATURITY_LEVELS[stuckAt].name}</b>，核心任務是：{MATURITY_LEVELS[stuckAt].task}。不用急著談投資、房產或退休，那些都是蓋在這一層之上；先讓這一層的 5 個項目都能打勾，再往上升級。
+                      </p>
+                    </>
+                  )}
+                </div>
+
+                <div style={{ display:"flex", gap:10 }}>
+                  <button onClick={goBack}
+                    style={{ flex:1, padding:"12px", background:C.bg, border:`1.5px solid ${C.border}`, borderRadius:10, color:C.navyDark, fontSize:15, fontWeight:700, cursor:"pointer" }}>
+                    ← 回上一題修改
+                  </button>
+                  <button onClick={restart}
+                    style={{ flex:1, padding:"12px", background:C.navyDeep, border:"none", borderRadius:10, color:"#eee8e0", fontSize:15, fontWeight:700, cursor:"pointer" }}>
+                    重新測驗
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
+
+        </div>
+      );
+    }
+
     function App() {
       const [page, setPage] = useState("home");
       const [clientName, setClientName] = useState("");
@@ -1890,6 +2217,7 @@
 
       const navItems = [
         { id:"home",       label:"首頁", icon:"⌂" },
+        { id:"maturity",   label:"理財", icon:"🧭" },
         { id:"retirement", label:"退休", icon:"📊" },
         { id:"insurance",  label:"保險", icon:"🛡" },
         { id:"health",     label:"房產", icon:"🏠" },
@@ -1922,6 +2250,7 @@
           {/* 頁面內容 */}
           <div>
             {page==="home"       && <HomePage onNavigate={setPage}/>}
+            {page==="maturity"   && <FinancialMaturityQuiz clientName={clientName}/>}
             {page==="retirement" && <RetirementCalculator clientName={clientName} initSalary={sharedSalary} initMonthlyNeed={sharedMonthlyNeed} onSalaryChange={setSharedSalary} onNeedChange={setSharedMonthlyNeed}/>}
             {page==="health"     && <PropertyPlan clientName={clientName}/>}
             {page==="cashflow"   && <ComingSoon title="收支健診" icon="💰" desc="此功能即將推出。" />}
