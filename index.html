@@ -1885,6 +1885,7 @@
     // ── 理財：財務階段檢視 ───────────────────────────────────
     const MATURITY_LEVELS = [
       { key:'flow', name:'流量（金流）', rpg:'生存者 Survivor', task:'建立收支管理、緊急預備金、現金流分析、收入來源整理',
+        advisorNote:'目前每月結餘還不穩定，代表收入一旦中斷，生活可能立刻出現壓力。建議先把「六個月緊急預備金」和收支記錄做起來，讓金流先穩定下來，才有餘力談後面的資產累積。',
         questions:[
           '我有至少 6 個月生活費的緊急預備金',
           '每個月的收入都有固定結餘，不是花光',
@@ -1893,6 +1894,7 @@
           '我已經有規劃或開始建立第二收入來源',
         ]},
       { key:'asset', name:'存量（資產）', rpg:'累積者 Accumulator', task:'建立資產負債表、資產配置、掌握資產累積速度',
+        advisorNote:'目前雖然有收入，但淨資產的累積速度還看不出來，等於賺得多、留得少。建議先建立一份簡單的資產負債表，每年檢視淨資產的變化，才能確認財富是不是真的在增加。',
         questions:[
           '我清楚知道自己目前的淨資產（資產減負債）',
           '我的淨資產每年都在穩定增加，而不是原地踏步',
@@ -1901,6 +1903,7 @@
           '我的負債（房貸等）在合理可控的範圍內',
         ]},
       { key:'protect', name:'保障（防火牆）', rpg:'守護者 Protector', task:'建立醫療、重疾、長照、壽險與家庭責任保障',
+        advisorNote:'如果今天因重大疾病或意外停工一年，目前的保障可能不足以撐住家庭現金流，資產累積和投資都可能被迫中斷去支付醫療與生活費用。建議先把醫療、重疾、壽險等防火牆補齊，再繼續往投資推進。',
         questions:[
           '如果收入中斷 3～6 個月，家庭生活仍能維持',
           '如果罹患重大疾病，家庭財務不會因此崩潰',
@@ -1909,6 +1912,7 @@
           '我每年都會重新檢視一次保障內容是否足夠',
         ]},
       { key:'invest', name:'投資', rpg:'成長者 Investor', task:'建立資產配置紀律，讓資產開始替你工作',
+        advisorNote:'目前資產大多還沒有「主動替你工作」，長期來看容易被通膨慢慢侵蝕。建議先確認自己的風險承受度，再透過 ETF 或基金等工具，讓一部分資金開始參與市場、產生複利效果。',
         questions:[
           '我已經有股票、基金或 ETF 等投資部位',
           '我每年會檢視並調整一次資產配置',
@@ -1917,6 +1921,7 @@
           '我的被動收入（股息、利息等）正在持續累積',
         ]},
       { key:'property', name:'房產', rpg:'配置者 Allocator', task:'釐清房產在整體資產配置中是資產還是負債',
+        advisorNote:'房產在你目前的財務結構中，角色還不夠清楚——它可能是資產，也可能默默變成負債。建議先檢視房貸條件與房地合一稅規定，把房產納入整體資產配置來看，而不是單獨存在。',
         questions:[
           '我清楚知道自己名下的房產，究竟是資產還是負債',
           '我的房貸條件（利率、年限）有定期檢視與優化',
@@ -1925,6 +1930,7 @@
           '房產支出不會拖垮我整體的現金流健康',
         ]},
       { key:'retire', name:'退休', rpg:'自由者 Freedom', task:'建立現金流退休、提領率、通膨與年金規劃',
+        advisorNote:'依照目前的儲蓄與投資速度推估，退休後每月可動用的現金流，可能低於你目前習慣的生活水準。建議先估算退休後每月所需生活費，並考慮每月增加一筆固定金額投入退休帳戶，提早拉高退休後的現金流。',
         questions:[
           '我已經估算過退休後每個月需要多少生活費',
           '我有規劃退休後資產的提領率與現金流來源',
@@ -1933,6 +1939,7 @@
           '我知道自己目前距離「財務自由」還差多少',
         ]},
       { key:'legacy', name:'稅務與傳承', rpg:'傳承者 Legacy', task:'規劃所得、贈與、遺產與家族傳承',
+        advisorNote:'你的資產已經到了需要思考「怎麼留下來」的階段，如果沒有規劃，贈與稅、遺產稅可能會讓傳承效率大打折扣。建議先了解自己適用的稅務級距，並考慮信託或保險工具，讓財富更有效率地傳給下一代。',
         questions:[
           '我了解自己適用的所得稅級距，並知道基本節稅工具',
           '我對贈與稅與遺產稅有基本的規劃概念',
@@ -1961,6 +1968,52 @@
             <div style={{ fontSize:11, color:C.textSub }}>{label || "%"}</div>
           </div>
         </div>
+      );
+    }
+
+    function MaturityRadarChart({ scores, labels, size=280 }) {
+      const n = scores.length;
+      const cx = size/2, cy = size/2;
+      const maxR = size/2 - 46;
+      const angleFor = (i) => (Math.PI*2*i/n) - Math.PI/2;
+      const pointFor = (i, val) => {
+        const r = (val/5) * maxR;
+        const a = angleFor(i);
+        return [cx + r*Math.cos(a), cy + r*Math.sin(a)];
+      };
+      const ringLevels = [1,2,3,4,5];
+      const dataPoints = scores.map((s,i) => pointFor(i,s));
+      const dataPath = dataPoints.map(p => p.join(",")).join(" ");
+
+      return (
+        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+          {ringLevels.map((lvl,ri) => {
+            const pts = Array.from({length:n}, (_,i) => pointFor(i, lvl));
+            return (
+              <polygon key={ri} points={pts.map(p=>p.join(",")).join(" ")}
+                fill="none" stroke={C.border} strokeWidth={ri===ringLevels.length-1 ? 1.4 : 1} />
+            );
+          })}
+          {Array.from({length:n}, (_,i) => {
+            const [x,y] = pointFor(i,5);
+            return <line key={i} x1={cx} y1={cy} x2={x} y2={y} stroke={C.border} strokeWidth="1" />;
+          })}
+          <polygon points={dataPath} fill={C.navyDeep} fillOpacity="0.22" stroke={C.navyDeep} strokeWidth="2" />
+          {dataPoints.map(([x,y],i) => (
+            <circle key={i} cx={x} cy={y} r="4" fill={C.navyDeep} />
+          ))}
+          {labels.map((label,i) => {
+            const a = angleFor(i);
+            const lx = cx + (maxR+30) * Math.cos(a);
+            const ly = cy + (maxR+30) * Math.sin(a);
+            return (
+              <text key={i} x={lx} y={ly} textAnchor="middle" dominantBaseline="middle"
+                fontSize="13" fontWeight="700" fill={C.navyDark} fontFamily="'Noto Sans TC', sans-serif">
+                {label}
+              </text>
+            );
+          })}
+        </svg>
       );
     }
 
@@ -2135,10 +2188,14 @@
             const overallPct = totalScore/MATURITY_TOTAL_Q*100;
             const overallColor = overallPct>=80 ? C.sageDark : overallPct>=50 ? C.sand : C.roseDark;
 
+            const nextLevelGap = stuckAt !== null ? Math.max(0, 4 - levelScore(stuckAt)) : 0;
+            const radarLabels = MATURITY_LEVELS.map(lv => lv.name.split("（")[0]);
+            const radarScores = MATURITY_LEVELS.map((_,i) => levelScore(i));
+
             return (
               <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
                 <div style={cardStyle}>
-                  <div style={{ display:"flex", alignItems:"center", gap:20, marginBottom:8 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:20, marginBottom:stuckAt!==null ? 16 : 0, flexWrap:"wrap" }}>
                     <MaturityScoreRing pct={overallPct} color={overallColor} size={90} label="分" />
                     <div>
                       <div style={{ fontSize:13, color:C.textSub, marginBottom:4, letterSpacing:"0.06em" }}>目前等級</div>
@@ -2147,6 +2204,22 @@
                       </div>
                       <div style={{ fontSize:14, color:C.text }}>總分 {totalScore} / {MATURITY_TOTAL_Q}</div>
                     </div>
+                  </div>
+                  {stuckAt !== null && (
+                    <div style={{ background:C.lavBg, border:"1px solid #d8d2e8", borderRadius:10, padding:"10px 16px", display:"flex", alignItems:"center", gap:8 }}>
+                      <span style={{ fontSize:16 }}>🎯</span>
+                      <span style={{ fontSize:14, color:C.navyDeep, fontWeight:600 }}>
+                        距離晉升 <b>Lv{stuckAt+1}．{MATURITY_LEVELS[stuckAt].rpg}</b>
+                        {nextLevelGap > 0 ? <>，還差 <b style={{color:C.roseDark}}>{nextLevelGap}</b> 題答到「符合」</> : "，只差最後確認！"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div style={cardStyle}>
+                  <div style={{ fontSize:15, fontWeight:700, color:C.navyDeep, marginBottom:14 }}>財務雷達圖</div>
+                  <div style={{ display:"flex", justifyContent:"center", marginBottom:8 }}>
+                    <MaturityRadarChart scores={radarScores} labels={radarLabels} size={300} />
                   </div>
                 </div>
 
@@ -2171,7 +2244,7 @@
                 </div>
 
                 <div style={{ background:C.sandBg, border:"1px solid #e8d8c4", borderRadius:14, padding:"18px 20px" }}>
-                  <div style={{ fontSize:13, color:C.sandDark, fontWeight:700, letterSpacing:"0.06em", marginBottom:8 }}>下一步建議</div>
+                  <div style={{ fontSize:13, color:C.sandDark, fontWeight:700, letterSpacing:"0.06em", marginBottom:8 }}>顧問建議</div>
                   {finalLevelIdx === MATURITY_LEVELS.length-1 ? (
                     <>
                       <div style={{ fontSize:17, fontWeight:800, color:C.navyDeep, marginBottom:8 }}>恭喜，你已經走完全部七個等級</div>
@@ -2185,7 +2258,7 @@
                         先把「{MATURITY_LEVELS[stuckAt].name}」這一層蓋穩
                       </div>
                       <p style={{ fontSize:15, color:C.text, lineHeight:1.85 }}>
-                        你目前卡在 <b>Lv{stuckAt+1}．{MATURITY_LEVELS[stuckAt].name}</b>，核心任務是：{MATURITY_LEVELS[stuckAt].task}。不用急著談投資、房產或退休，那些都是蓋在這一層之上；先讓這一層的 5 個項目都能打勾，再往上升級。
+                        {MATURITY_LEVELS[stuckAt].advisorNote}
                       </p>
                     </>
                   )}
