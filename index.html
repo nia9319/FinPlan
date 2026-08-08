@@ -1856,6 +1856,20 @@
             </div>
           </div>
 
+          {/* ── 人生財務導航 ── */}
+          <button onClick={()=>onNavigate("maturity")}
+            style={{ width:"calc(100% + 32px)", margin:"0 -16px 16px", textAlign:"left", cursor:"pointer",
+              border:"none", display:"flex", alignItems:"center",
+              justifyContent:"space-between", gap:14, flexWrap:"wrap",
+              background:C.lavBg, padding:"16px 20px" }}>
+            <span style={{ display:"flex", alignItems:"center", gap:8, fontSize:15, fontWeight:700, color:C.navyDeep }}>
+              <span style={{ fontSize:17 }}>🧭</span> 人生財務導航檢視
+            </span>
+            <span style={{ fontSize:14, fontWeight:700, color:C.navyDeep, whiteSpace:"nowrap" }}>
+              財務等級測驗 →
+            </span>
+          </button>
+
           {/* ── 工具卡片 ── */}
           <div style={{ marginBottom:12 }}>
             <div style={{ fontSize:11, color:C.textLight, letterSpacing:"0.12em", marginBottom:10, fontWeight:500 }}>專業工具</div>
@@ -1885,67 +1899,67 @@
     // ── 理財：財務階段檢視 ───────────────────────────────────
     const MATURITY_LEVELS = [
       { key:'flow', name:'流量（金流）', rpg:'生存者 Survivor', task:'建立收支管理、緊急預備金、現金流分析、收入來源整理',
-        advisorNote:'目前每月結餘還不穩定，代表收入一旦中斷，生活可能立刻出現壓力。建議先把「六個月緊急預備金」和收支記錄做起來，讓金流先穩定下來，才有餘力談後面的資產累積。',
+        advisorNote:'目前每月結餘還不穩定，代表收入一旦中斷，生活可能立刻出現壓力。建議先把「六個月緊急預備金」和收支記錄做起來，如果收入來源比較單一，也可以考慮用保障型工具先把最壞的情況接住，讓金流先穩定下來，才有餘力談後面的資產累積。',
         questions:[
-          '我有至少 6 個月生活費的緊急預備金',
-          '每個月的收入都有固定結餘，不是花光',
-          '我清楚知道自己的收支狀況（有記帳或掌握金流）',
-          '我沒有信用卡循環利息或高利率負債',
-          '我已經有規劃或開始建立第二收入來源',
+          { text:'如果收入突然停了，你的存款可以讓你安心撐過半年嗎？', yes:'可以', no:'還沒辦法' },
+          { text:'這個月結束的時候，你的戶頭通常是變多，還是變少？', yes:'變多', no:'變少' },
+          { text:'上個月大概花了多少錢、花在哪裡，你心裡有底嗎？', yes:'有底', no:'說不太上來' },
+          { text:'你現在有沒有卡循環利息或高利率借款，正在慢慢吃掉你的錢？', yes:'沒有', no:'有' },
+          { text:'如果本業收入突然中斷，你還有其他收入來源嗎？', yes:'有', no:'沒有' },
         ]},
       { key:'asset', name:'存量（資產）', rpg:'累積者 Accumulator', task:'建立資產負債表、資產配置、掌握資產累積速度',
-        advisorNote:'目前雖然有收入，但淨資產的累積速度還看不出來，等於賺得多、留得少。建議先建立一份簡單的資產負債表，每年檢視淨資產的變化，才能確認財富是不是真的在增加。',
+        advisorNote:'淨資產的累積尚未穩定成長。建議先建立一份簡單的資產負債表，每年檢視淨資產的變化，確認財富是不是真的在增加。',
         questions:[
-          '我清楚知道自己目前的淨資產（資產減負債）',
-          '我的淨資產每年都在穩定增加，而不是原地踏步',
-          '我對存款、股票、基金等資產有基本的配置概念',
-          '我或家庭有一份完整的資產負債表',
-          '我的負債（房貸等）在合理可控的範圍內',
+          { text:'如果現在要你算出自己的淨資產（資產減負債），你算得出來嗎？', yes:'算得出來', no:'算不出來' },
+          { text:'跟一年前比，你的淨資產是變多了，還是差不多、甚至變少了？', yes:'變多了', no:'差不多或變少' },
+          { text:'股票、基金、保單等理財工具，你有沒有大概的配置方向？', yes:'有方向', no:'還沒想過' },
+          { text:'你或你的家庭有沒有一份完整的資產負債表？', yes:'有', no:'沒有' },
+          { text:'你現在的負債（信貸、車貸、房貸等），會不會讓你覺得有壓力？', yes:'不會', no:'會' },
         ]},
       { key:'protect', name:'保障（防火牆）', rpg:'守護者 Protector', task:'建立醫療、重疾、長照、壽險與家庭責任保障',
-        advisorNote:'如果今天因重大疾病或意外停工一年，目前的保障可能不足以撐住家庭現金流，資產累積和投資都可能被迫中斷去支付醫療與生活費用。建議先把醫療、重疾、壽險等防火牆補齊，再繼續往投資推進。',
+        advisorNote:'如果今天因重大傷病或意外停止工作，目前的保障可能不足以支撐家庭現金流。建議先把醫療、重傷、壽險等防火牆穩固，再繼續往投資與資產配置推進。',
         questions:[
-          '如果收入中斷 3～6 個月，家庭生活仍能維持',
-          '如果罹患重大疾病，家庭財務不會因此崩潰',
-          '我已經有長期照顧（長照）的規劃',
-          '我的壽險保額足以承擔家庭責任（房貸、子女教養等）',
-          '我每年都會重新檢視一次保障內容是否足夠',
+          { text:'如果收入中斷 3～6 個月，家裡的生活還撐得住嗎？', yes:'撐得住', no:'會有壓力' },
+          { text:'如果自己或家人不幸罹患重大傷病或其他重症，家庭財務扛得住嗎？', yes:'扛得住', no:'會受影響' },
+          { text:'萬一哪天需要長期照顧，你有想過誰來照顧、錢從哪裡來嗎？', yes:'有想過', no:'還沒想過' },
+          { text:'你的壽險保額，能撐起房貸、孩子教育或長輩照顧等家庭責任嗎？', yes:'能', no:'不太能' },
+          { text:'你知道自己的保障內容，並且了解保單活化嗎？', yes:'了解', no:'不太了解' },
         ]},
       { key:'invest', name:'投資', rpg:'成長者 Investor', task:'建立資產配置紀律，讓資產開始替你工作',
-        advisorNote:'目前資產大多還沒有「主動替你工作」，長期來看容易被通膨慢慢侵蝕。建議先確認自己的風險承受度，再透過 ETF 或基金等工具，讓一部分資金開始參與市場、產生複利效果。',
+        advisorNote:'目前資產大多還沒有「主動替你工作」，長期來看容易被通膨慢慢侵蝕。建議先確認自己的風險承受度，再透過 ETF 或基金等工具，讓資金開始參與市場、產生複利效果；如果擔心市場波動影響成果，也可以搭配分紅型或月配息型保單，把獲利鎖住，讓投資的路走得更穩、更長遠。',
         questions:[
-          '我已經有股票、基金或 ETF 等投資部位',
-          '我每年會檢視並調整一次資產配置',
-          '我的投資決策有紀律，不會隨市場情緒進出',
-          '我了解自己的風險承受度，並依此配置資產',
-          '我的被動收入（股息、利息等）正在持續累積',
+          { text:'你現在有股票、基金或 ETF 的投資部位，且能控制投資的風險嗎？', yes:'有，且能控制', no:'還沒有，或風險沒控制好' },
+          { text:'市場大漲大跌的時候，你的投資決定容易被情緒牽著走嗎？', yes:'完全不受影響', no:'容易受影響' },
+          { text:'你清楚自己能承受的風險高低，並按照低中高風險標準配置資產嗎？', yes:'清楚', no:'不清楚' },
+          { text:'你的投資分配，能不能持續帶來股息、利息這類被動收入？', yes:'能', no:'還不能' },
+          { text:'你了解健保補充保費與最低稅負制等稅務上的課稅方式嗎？', yes:'了解', no:'不了解' },
         ]},
       { key:'property', name:'房產', rpg:'配置者 Allocator', task:'釐清房產在整體資產配置中是資產還是負債',
-        advisorNote:'房產在你目前的財務結構中，角色還不夠清楚——它可能是資產，也可能默默變成負債。建議先檢視房貸條件與房地合一稅規定，把房產納入整體資產配置來看，而不是單獨存在。',
+        advisorNote:'房產在你目前的財務結構中，角色還不夠清楚。建議多累積跟銀行往來的資本並檢視房貸條件與房地合一稅等規定，把房產納入長遠的整體資產配置做規劃。',
         questions:[
-          '我清楚知道自己名下的房產，究竟是資產還是負債',
-          '我的房貸條件（利率、年限）有定期檢視與優化',
-          '我了解房地合一稅等相關的房產稅務規定',
-          '我對自住 / 置產 / 活化有明確的房產策略',
-          '房產支出不會拖垮我整體的現金流健康',
+          { text:'你名下的房產是資產，還是比較像負債？', yes:'資產', no:'負債' },
+          { text:'你的房貸條件（利率、年限、額度），會定期檢視有沒有更好的方案嗎？', yes:'會', no:'不會' },
+          { text:'你了解房地合一稅這類跟房產有關的稅務規定嗎？', yes:'了解', no:'不太了解' },
+          { text:'對於自住、置產或活化，你心裡有沒有一個明確的房產策略？', yes:'有', no:'還沒有' },
+          { text:'房產的相關支出，能不能控制在家庭現金流支出的三分之一左右？', yes:'能', no:'不能' },
         ]},
       { key:'retire', name:'退休', rpg:'自由者 Freedom', task:'建立現金流退休、提領率、通膨與年金規劃',
-        advisorNote:'依照目前的儲蓄與投資速度推估，退休後每月可動用的現金流，可能低於你目前習慣的生活水準。建議先估算退休後每月所需生活費，並考慮每月增加一筆固定金額投入退休帳戶，提早拉高退休後的現金流。',
+        advisorNote:'依照目前的儲蓄與投資績效推估，退休後每月可動用的現金流可能不夠。建議在有考慮到通膨的情況下估算未來生活費並每月增加投入退休帳戶。',
         questions:[
-          '我已經估算過退休後每個月需要多少生活費',
-          '我有規劃退休後資產的提領率與現金流來源',
-          '我的退休規劃有把通膨因素考慮進去',
-          '我已經配置年金或其他長期穩定的現金流工具',
-          '我知道自己目前距離「財務自由」還差多少',
+          { text:'你有沒有估算過，退休後每個月大概需要多少生活費？', yes:'有', no:'沒有' },
+          { text:'退休後要怎麼提領資產、現金流從哪裡來，你想過嗎？', yes:'想過', no:'還沒想過' },
+          { text:'你的退休規劃，有把通膨這個因素算進去嗎？', yes:'有', no:'沒有' },
+          { text:'你有沒有配置年金或其他能長期穩定產生現金流的工具？', yes:'有', no:'沒有' },
+          { text:'你知道自己現在距離「財務自由」，大概還差多遠嗎？', yes:'大概知道', no:'完全沒概念' },
         ]},
-      { key:'legacy', name:'稅務與傳承', rpg:'傳承者 Legacy', task:'規劃所得、贈與、遺產與家族傳承',
-        advisorNote:'你的資產已經到了需要思考「怎麼留下來」的階段，如果沒有規劃，贈與稅、遺產稅可能會讓傳承效率大打折扣。建議先了解自己適用的稅務級距，並考慮信託或保險工具，讓財富更有效率地傳給下一代。',
+      { key:'legacy', name:'稅務', rpg:'傳承者 Legacy', task:'規劃所得、贈與、遺產與家族傳承',
+        advisorNote:'先推估自己適用的各項稅務級距，並考慮信託或保險等合法輕稅工具，讓財富能盡量在符合自己完整意願的情況下，更有效率地傳承給下一代。',
         questions:[
-          '我了解自己適用的所得稅級距，並知道基本節稅工具',
-          '我對贈與稅與遺產稅有基本的規劃概念',
-          '我了解保險在財富傳承中可以扮演的角色',
-          '我有信託或家族傳承的初步規劃',
-          '我的財富傳承目標，已經和家人溝通清楚',
+          { text:'你知道自己適用的所得稅級距，並且善用各項扣除額嗎？', yes:'知道', no:'不太清楚' },
+          { text:'對於贈與稅、遺產稅，你有基本的規劃概念嗎？', yes:'有', no:'沒有' },
+          { text:'你知道保險在財富傳承與節稅上，可以扮演什麼角色嗎？', yes:'知道', no:'不太清楚' },
+          { text:'你有沒有信託或家族傳承的初步規劃？', yes:'有', no:'沒有' },
+          { text:'在財富傳承上，你能不能確保如果錢沒花完，剩下的能按照自己的意願規劃？', yes:'能', no:'不能' },
         ]},
     ];
     const MATURITY_TOTAL_Q = MATURITY_LEVELS.length * 5;
@@ -1967,6 +1981,64 @@
             <div style={{ fontSize:24, fontWeight:800, color, lineHeight:1 }}>{Math.round(pct)}</div>
             <div style={{ fontSize:11, color:C.textSub }}>{label || "%"}</div>
           </div>
+        </div>
+      );
+    }
+
+    function MaturityPyramid({ levels, achievedIdx=-1, stuckIdx=null }) {
+      const [selected, setSelected] = useState(null);
+      const order = levels.map((_,i)=>i).slice().reverse(); // Lv7 → Lv1, top to bottom
+      const widthFor = (i) => 40 + i*9.5; // Lv1(i=0)=40%? need Lv1 widest -> invert
+      // Lv1 (i=0) should be the widest base; Lv7 (i=6) narrowest apex.
+      const pctFor = (i) => 94 - i*8; // i=0 -> 94%, i=6 -> 46%... wait Lv1 should be widest
+      const activeInfo = selected !== null ? levels[selected] : null;
+
+      return (
+        <div>
+          <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:2 }}>
+            {order.map((i) => {
+              const lv = levels[i];
+              const widthPct = 100 - i*8; // Lv1(i=0)=100%, Lv7(i=6)=52%
+              const isAchieved = i <= achievedIdx;
+              const isStuck = stuckIdx !== null && i === stuckIdx;
+              const isSelected = selected === i;
+              let bg = C.bg, border = C.border, color = C.navyDark;
+              if (isAchieved) { bg = `linear-gradient(180deg, #e8d9ae, ${C.sand})`; border = C.sandDark; color = "#4a3a12"; }
+              if (isStuck) { bg = C.roseBg; border = C.roseDark; color = C.roseDark; }
+              if (isSelected) { border = C.navyDeep; }
+              return (
+                <button key={lv.key} onClick={()=>setSelected(selected===i ? null : i)}
+                  style={{
+                    width:`${widthPct}%`, maxWidth:360, height:40,
+                    clipPath:"polygon(3% 0, 97% 0, 100% 100%, 0% 100%)",
+                    background:bg, border:`1.5px solid ${border}`, borderTop:i===6?`1.5px solid ${border}`:"none",
+                    display:"flex", alignItems:"center", justifyContent:"center", gap:6,
+                    cursor:"pointer", transition:"all 0.25s ease", position:"relative",
+                    boxShadow: isSelected ? "0 0 0 2px rgba(61,82,107,0.15)" : "none",
+                  }}>
+                  <span style={{ fontSize:11, fontWeight:700, color, opacity:0.7 }}>Lv{i+1}</span>
+                  <span style={{ fontSize:13, fontWeight:700, color }}>{lv.name.split("（")[0]}</span>
+                  {isStuck && <span style={{ fontSize:11 }}>🎯</span>}
+                  {isAchieved && <span style={{ fontSize:11 }}>✓</span>}
+                </button>
+              );
+            })}
+          </div>
+
+          {activeInfo && (
+            <div style={{ marginTop:16, background:C.bg, border:`1px solid ${C.borderSub}`, borderRadius:12, padding:"14px 18px" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                <span style={{ background:C.navyDeep, color:"#eee8e0", borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:700 }}>Lv{selected+1}</span>
+                <span style={{ fontSize:14, fontWeight:700, color:C.navyDeep }}>{activeInfo.name}．{activeInfo.rpg}</span>
+              </div>
+              <div style={{ fontSize:13, color:C.textSub, lineHeight:1.75 }}>{activeInfo.task}</div>
+            </div>
+          )}
+          {!activeInfo && (
+            <div style={{ marginTop:14, textAlign:"center", fontSize:12, color:C.textLight }}>
+              點選任一層，看看那個等級在做什麼
+            </div>
+          )}
         </div>
       );
     }
@@ -2128,16 +2200,16 @@
                   <div style={{ fontSize:13, color:C.textLight, marginLeft:"auto", whiteSpace:"nowrap" }}>第 {qi+1} / 5 題</div>
                 </div>
                 <div style={{ fontSize:19, fontWeight:700, color:C.text, lineHeight:1.7, marginBottom:22, minHeight:70 }}>
-                  {level.questions[qi]}
+                  {level.questions[qi].text}
                 </div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                   <button onClick={()=>handleAnswer(true)}
                     style={{ padding:"16px 14px", borderRadius:10, border:`1.5px solid ${answers[qIdx]===true ? C.navyDark : C.border}`, background:answers[qIdx]===true ? C.navyDeep : C.bg, color:answers[qIdx]===true ? "#eee8e0" : C.text, fontSize:16, fontWeight:700, cursor:"pointer", transition:"all 0.15s" }}>
-                    符合
+                    {level.questions[qi].yes}
                   </button>
                   <button onClick={()=>handleAnswer(false)}
                     style={{ padding:"16px 14px", borderRadius:10, border:`1.5px solid ${answers[qIdx]===false ? C.roseDark : C.border}`, background:answers[qIdx]===false ? C.roseBg : C.bg, color:answers[qIdx]===false ? C.roseDark : C.text, fontSize:16, fontWeight:700, cursor:"pointer", transition:"all 0.15s" }}>
-                    不符合
+                    {level.questions[qi].no}
                   </button>
                 </div>
               </div>
@@ -2160,7 +2232,7 @@
                     <div>
                       <div style={{ fontSize:13, color:C.textSub, marginBottom:4, letterSpacing:"0.06em" }}>LEVEL {li+1} 結果</div>
                       <div style={{ fontSize:22, fontWeight:800, color, marginBottom:6 }}>{passed ? "通關" : "尚未達標"}：{level.name}</div>
-                      <div style={{ fontSize:14, color:C.text }}>{score} / 5 題符合</div>
+                      <div style={{ fontSize:14, color:C.text }}>5 題中，答對了 {score} 題</div>
                     </div>
                   </div>
                   <div style={{ background:"rgba(255,255,255,0.55)", borderRadius:10, padding:"12px 16px", fontSize:14.5, color:C.textSub, lineHeight:1.85, marginBottom:20 }}>
@@ -2210,7 +2282,7 @@
                       <span style={{ fontSize:16 }}>🎯</span>
                       <span style={{ fontSize:14, color:C.navyDeep, fontWeight:600 }}>
                         距離晉升 <b>Lv{stuckAt+1}．{MATURITY_LEVELS[stuckAt].rpg}</b>
-                        {nextLevelGap > 0 ? <>，還差 <b style={{color:C.roseDark}}>{nextLevelGap}</b> 題答到「符合」</> : "，只差最後確認！"}
+                        {nextLevelGap > 0 ? <>，還差 <b style={{color:C.roseDark}}>{nextLevelGap}</b> 題就能晉升</> : "，只差最後確認！"}
                       </span>
                     </div>
                   )}
@@ -2243,26 +2315,43 @@
                   </div>
                 </div>
 
-                <div style={{ background:C.sandBg, border:"1px solid #e8d8c4", borderRadius:14, padding:"18px 20px" }}>
-                  <div style={{ fontSize:13, color:C.sandDark, fontWeight:700, letterSpacing:"0.06em", marginBottom:8 }}>顧問建議</div>
-                  {finalLevelIdx === MATURITY_LEVELS.length-1 ? (
-                    <>
-                      <div style={{ fontSize:17, fontWeight:800, color:C.navyDeep, marginBottom:8 }}>恭喜，你已經走完全部七個等級</div>
-                      <p style={{ fontSize:15, color:C.text, lineHeight:1.85 }}>
-                        從流量、資產、保障、投資、房產、退休到稅務與傳承，你的財務基礎已經相當完整。真正有錢的人接下來研究的，是如何讓財富有效率地留下來、傳下去。
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ fontSize:17, fontWeight:800, color:C.navyDeep, marginBottom:8 }}>
-                        先把「{MATURITY_LEVELS[stuckAt].name}」這一層蓋穩
+                {(() => {
+                  const weakLevels = MATURITY_LEVELS
+                    .map((lv,i) => ({ lv, i, score: levelScore(i) }))
+                    .filter(x => (x.score/5*100) < 60);
+
+                  if (weakLevels.length === 0) {
+                    return (
+                      <div style={{ background:C.sandBg, border:"1px solid #e8d8c4", borderRadius:14, padding:"18px 20px" }}>
+                        <div style={{ fontSize:13, color:C.sandDark, fontWeight:700, letterSpacing:"0.06em", marginBottom:8 }}>顧問建議</div>
+                        <div style={{ fontSize:17, fontWeight:800, color:C.navyDeep, marginBottom:8 }}>七個等級的基礎都算穩健</div>
+                        <p style={{ fontSize:15, color:C.text, lineHeight:1.85 }}>
+                          從流量、資產、保障、投資、房產、退休到稅務，每一層都在 60 分以上。真正有錢的人接下來研究的，是如何讓財富有效率地留下來、傳下去。
+                        </p>
                       </div>
-                      <p style={{ fontSize:15, color:C.text, lineHeight:1.85 }}>
-                        {MATURITY_LEVELS[stuckAt].advisorNote}
-                      </p>
-                    </>
-                  )}
-                </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                      <div style={{ fontSize:13, color:C.sandDark, fontWeight:700, letterSpacing:"0.06em", padding:"0 4px" }}>
+                        顧問建議 · 以下 {weakLevels.length} 個等級未滿 60 分，建議優先補強
+                      </div>
+                      {weakLevels.map(({lv,i,score}) => (
+                        <div key={lv.key} style={{ background:C.sandBg, border:"1px solid #e8d8c4", borderRadius:14, padding:"18px 20px" }}>
+                          <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8 }}>
+                            <span style={{ background:C.sandDark, color:"#fff", borderRadius:6, padding:"2px 8px", fontSize:11, fontWeight:700 }}>Lv{i+1}</span>
+                            <div style={{ fontSize:17, fontWeight:800, color:C.navyDeep }}>{lv.name}</div>
+                            <div style={{ fontSize:12, color:C.textSub, marginLeft:"auto" }}>{Math.round(score/5*100)} 分</div>
+                          </div>
+                          <p style={{ fontSize:15, color:C.text, lineHeight:1.85, margin:0 }}>
+                            {lv.advisorNote}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
 
                 <div style={{ display:"flex", gap:10 }}>
                   <button onClick={goBack}
