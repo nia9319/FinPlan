@@ -182,6 +182,7 @@
 
     function RetirementCalculator({ clientName, initSalary=50000, initMonthlyNeed=60000, onSalaryChange, onNeedChange }) {
       const [age, setAge] = useState(35);
+      const [birthYearROC, setBirthYearROC] = useState(115 - 35); // 出生年次（民國），預設依目前年齡概估
       const [retireAge, setRetireAge] = useState(65);
       const [claimAge, setClaimAge] = useState(65);
       const [life, setLife] = useState(85);
@@ -227,8 +228,13 @@
         const laborBelowMinYears = laborYears < 15;
 
         // ── 展延/提前係數 ─────────────────────────────────
-        // 法定請領年齡65歲（民國74年後出生），每提前1年-4%，每延後1年+4%，上限±20%
-        const legalClaimAge = 65;
+        // 法定請領年齡依出生年次判斷（勞保局公告）：50年次以前逐年遞增，51年次以後為65歲
+        const legalClaimAge = birthYearROC <= 46 ? 60
+          : birthYearROC === 47 ? 61
+          : birthYearROC === 48 ? 62
+          : birthYearROC === 49 ? 63
+          : birthYearROC === 50 ? 64
+          : 65;
         const claimDiff = claimAge - legalClaimAge; // 正=延後, 負=提前
         const clampedDiff = Math.max(-5, Math.min(5, claimDiff));
         const claimRatio = 1 + clampedDiff * 0.04;
@@ -242,11 +248,12 @@
         const laborAnnuityBetter = laborAnnuityMonthly1 > laborAnnuityMonthly2 ? 1 : 2;
         const laborAnnuityMonthly = Math.max(laborAnnuityMonthly1, laborAnnuityMonthly2);
 
-        // 一次性給付（年資未滿15年，或98前有年資選一次領）
-        const laborLumpSum = hasPre98 ? Math.round(insuredSalary * Math.min(laborYears, 45)) : 0;
-        // 年資未滿15年一次性給付：每年1個月，最高45個月
-        const laborLumpSumOnly = Math.round(insuredSalary * Math.min(laborYears, 45));
+        // 一次性給付月數：前15年每滿1年1個月，超過15年每滿1年2個月，最高45個月（勞保條例第59條）
+        const laborLumpSumMonths = laborYears <= 15 ? laborYears : Math.min(45, 15 + (laborYears - 15) * 2);
+        const laborLumpSum = hasPre98 ? Math.round(insuredSalary * laborLumpSumMonths) : 0;
+        const laborLumpSumOnly = Math.round(insuredSalary * laborLumpSumMonths);
         const fund = calcPensionFund({ yearsToRetire, pensionSalary, totalRate, pensionReturnRate: pensionReturn, salaryGrowthRate: salaryGrowth, initialBalance: pensionBalance });
+        // 註：以下為資產攤提模擬（本金÷月數），非勞保局公告之年金現值因子法定月退休金算法，僅供資產規劃參考
         const pension20Monthly = Math.round(fund / 240);
         const pension24Monthly = Math.round(fund / 288);
         const govMonthly = laborAnnuityMonthly + pension20Monthly;
@@ -257,7 +264,7 @@
         const dcaMonthly = totalGap > 0 ? (mr > 0 ? totalGap * mr / (Math.pow(1 + mr, months) - 1) : totalGap / months) : 0;
         const lumpSum = totalGap > 0 ? totalGap / Math.pow(1 + investReturn / 100, yearsToRetire) : 0;
         const coverageRate = Math.min(100, Math.round((govMonthly / adjustedMonthlyNeed) * 100));
-        setResult({ adjustedMonthlyNeed, laborAnnuityMonthly, laborAnnuityMonthly1, laborAnnuityMonthly2, laborAnnuityBetter, laborLumpSum, laborLumpSumOnly, laborBelowMinYears, pensionLumpSum: fund, pension20Monthly, pension24Monthly, govMonthly, monthlyGap: Math.max(0, Math.round(monthlyGap)), totalGap: Math.round(totalGap), dcaMonthly: Math.round(dcaMonthly), lumpSum: Math.round(lumpSum), retirementYears, yearsToRetire, coverageRate, isCapped: salary > PENSION_CAP, inflationFactor, claimRatio, clampedDiff });
+        setResult({ adjustedMonthlyNeed, laborAnnuityMonthly, laborAnnuityMonthly1, laborAnnuityMonthly2, laborAnnuityBetter, laborLumpSum, laborLumpSumOnly, laborLumpSumMonths, laborBelowMinYears, pensionLumpSum: fund, pension20Monthly, pension24Monthly, govMonthly, monthlyGap: Math.max(0, Math.round(monthlyGap)), totalGap: Math.round(totalGap), dcaMonthly: Math.round(dcaMonthly), lumpSum: Math.round(lumpSum), retirementYears, yearsToRetire, coverageRate, isCapped: salary > PENSION_CAP, inflationFactor, claimRatio, clampedDiff, legalClaimAge });
         setShow(false);
         setTimeout(() => setShow(true), 80);
       };
@@ -284,13 +291,14 @@
                 <div style={cardStyle}>
                   <SecTitle title="基本資料" />
                   <NumField label="目前年齡" value={age} setter={setAge} unit="歲" />
+                  <NumField label="出生年次（民國）" value={birthYearROC} setter={setBirthYearROC} unit="年" hint="用於判斷勞保法定請領年齡，請填實際出生年次"/>
                   <NumField label="預估退休年齡" value={retireAge} setter={setRetireAge} unit="歲" />
                   <NumField label="勞保請領年齡" value={claimAge} setter={setClaimAge} unit="歲"
-                    hint={claimAge < 65 ? `提前${65-claimAge}年，減給${(65-claimAge)*4}%` : claimAge > 65 ? `延後${claimAge-65}年，增給${(claimAge-65)*4}%` : "法定年齡"} />
+                    hint={(()=>{ const lca = result?result.legalClaimAge:65; return claimAge < lca ? `提前${lca-claimAge}年，減給${(lca-claimAge)*4}%（法定${lca}歲）` : claimAge > lca ? `延後${claimAge-lca}年，增給${(claimAge-lca)*4}%（法定${lca}歲）` : `法定年齡（依出生年次約為${lca}歲）`; })()} />
                   <NumField label="預估壽命" value={life} setter={setLife} unit="歲" />
                   <NumField label="勞保投保年資" value={laborYears} setter={setLaborYears} unit="年" />
-                  <NumField label="目前月薪" value={salary} setter={handleSalaryChange} unit="元"
-                    hint={salary > PENSION_CAP ? "超上限，以15萬計" : null} />
+                  <NumField label="預估平均月投保薪資" value={salary} setter={handleSalaryChange} unit="元"
+                    hint={salary > PENSION_CAP ? "超上限，以15萬計" : "以加保期間最高60個月平均月投保薪資估算，正式金額依勞保局核定為準"} />
 
 
                 </div>
@@ -404,7 +412,7 @@
                       </div>
                       <div>
                         <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: C.textSub, marginBottom: 6 }}>
-                          <span>政府保障覆蓋率（勞保年金 ＋ 勞退月領 20 年）</span>
+                          <span>政府保障覆蓋率（勞保年金 ＋ 勞退資產20年攤提）</span>
                           <b style={{ color: C.text }}>{result.coverageRate}%</b>
                         </div>
                         <div style={{ height: 6, background: C.border, borderRadius: 3, overflow: "hidden" }}>
@@ -421,7 +429,7 @@
                             ⚠ 投保年資未滿 15 年，不符合年金請領資格，僅能申請一次性老年給付
                           </div>
                           <Card label="一次性老年給付（估算）" value={result.laborLumpSumOnly}
-                            sub={`投保薪資 NT$${fmt(Math.min(salary, 45800))} × ${laborYears} 個月基數`}
+                            sub={`投保薪資 NT$${fmt(Math.min(salary, 45800))} × ${result.laborLumpSumMonths} 個月基數`}
                             color={C.sand} bg={C.sandBg} border="#e8d8c4" />
                         </div>
                       ) : (
@@ -461,8 +469,8 @@
                       )}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
                         <Card label="退休時帳戶總額" value={result.pensionLumpSum} sub="含現有餘額及複利" color={C.lavender} bg={C.lavBg} border="#d8d2e8" />
-                        <Card label="月領（分 20 年）" value={result.pension20Monthly} sub="240 個月" color={C.navyDark} bg={C.bg} />
-                        <Card label="月領（分 24 年）" value={result.pension24Monthly} sub="288 個月" color={C.navyDark} bg={C.bg} />
+                        <Card label="資產分20年攤提" value={result.pension20Monthly} sub="240 個月・非法定月退休金" color={C.navyDark} bg={C.bg} />
+                        <Card label="資產分24年攤提" value={result.pension24Monthly} sub="288 個月・非法定月退休金" color={C.navyDark} bg={C.bg} />
                       </div>
                     </div>
 
@@ -503,7 +511,7 @@
                     <div style={{ fontSize: 11, color: C.textLight, lineHeight: 2, padding: "0 4px" }}>
                       ＊退休每月需求已依通膨率（{inflationRate2}%）換算為退休當年名目金額。<br />
                       ＊勞退提繳工資上限 NT$150,000；勞保投保薪資上限 NT$45,800。<br />
-                      ＊月退試算以帳戶總額除以月數（實際依勞保局公告保證收益率）。<br />
+                      ＊本頁20年／24年攤提僅為退休資產現金流模擬，非勞退條例之法定月退休金（法定月退休金依個人專戶本金及收益、年金生命表、平均餘命與公告利率計算）。<br />
                                             ＊<span style={{ color: C.roseDark, fontWeight: 500 }}>以上所有數據均為試算參考值，實際給付金額以勞動部勞工保險局正式核定為準，建議定期至勞保局 e 化服務系統確認個人帳戶資料。</span>
                     </div>
                   </>
@@ -1127,8 +1135,8 @@
         <div style={{ maxWidth:960, margin:"0 auto", padding:"24px 16px" }}>
           <div style={{ marginBottom:20 }}>
             {clientName && <div style={{ background:C.lavBg, border:`1px solid #d8d2e8`, borderRadius:10, padding:"8px 16px", marginBottom:12, display:"flex", alignItems:"center", gap:8 }}><span style={{ fontSize:12, color:C.lavender }}>👤 客戶</span><span style={{ fontSize:15, fontWeight:700, color:C.navyDeep }}>{clientName}</span><span style={{ fontSize:11, color:C.textLight, marginLeft:"auto" }}>遺產稅試算</span></div>}
-            <h2 style={{ fontSize:24, fontWeight:800, color:C.navyDeep, margin:"0 0 6px" }}>遺產稅試算</h2>
-            <p style={{ fontSize:13, color:C.textSub, margin:"0 0 2px" }}>依據 114年（2025年）最新稅率試算</p>
+            <h2 style={{ fontSize:24, fontWeight:800, color:C.navyDeep, margin:"0 0 6px" }}>遺產稅快速估算</h2>
+            <p style={{ fontSize:13, color:C.textSub, margin:"0 0 2px" }}>依據 115年度最新稅率試算</p>
             <p style={{ fontSize:11, color:C.textLight, margin:0 }}>免稅額 1,333萬｜課稅級距 5,621萬 / 1億1,242萬｜稅率 10% / 15% / 20%</p>
           </div>
 
@@ -1258,7 +1266,7 @@
 
                   {/* 稅率表參考 */}
                   <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"18px 20px", boxShadow:"0 1px 4px rgba(100,90,80,0.06)" }}>
-                    <div style={{ fontSize:15, fontWeight:700, color:C.navyDeep, marginBottom:12, paddingBottom:10, borderBottom:`1.5px solid ${C.border}` }}>114年課稅級距參考</div>
+                    <div style={{ fontSize:15, fontWeight:700, color:C.navyDeep, marginBottom:12, paddingBottom:10, borderBottom:`1.5px solid ${C.border}` }}>115年度課稅級距參考</div>
                     {[
                       { range:"5,621 萬以下", rate:"10%", prog:"0 萬", active: result.netEstate <= T1 },
                       { range:"5,621萬 ～ 1億1,242萬", rate:"15%", prog:"562.1 萬", active: result.netEstate > T1 && result.netEstate <= T2 },
@@ -1281,16 +1289,325 @@
                       {result.tax === 0 && <div>・遺產總額在免稅額與扣除額範圍內，目前無需繳納遺產稅</div>}
                       {result.tax > 0 && result.tax < 500 && <div>・遺產稅額尚屬合理，建議持續關注財產增值狀況</div>}
                       {result.tax >= 500 && <div>・遺產稅額較高，建議提早規劃生前贈與（每年每人免稅額 244 萬元）</div>}
-                      <div>・分紅壽險可作為「稅源預留」工具，保險理賠金不計入遺產，是高資產族群的重要規劃工具</div>
+                      <div>・部分符合條件之保險死亡給付可不列入遺產總額，但仍須依保單結構、要保人／被保險人／受益人是否同一人及實際交易情形個案判斷，並留意可能計入最低稅負基本所得額</div>
                       <div>・夫妻間贈與免稅，可善用配偶財產規劃降低遺產總額</div>
                       
                     </div>
                   </div>
 
                   <div style={{ fontSize:10, color:C.textLight, lineHeight:1.8 }}>
-                    ＊本試算適用 114年（2025年）1月1日以後發生之繼承案件。<br/>
+                    ＊本頁為遺產稅快速估算，未納入死亡前2年內特定親屬贈與、農地扣除、剩餘財產差額分配請求權等項目，正式規劃請洽會計師或地政士。<br/>
+                    ＊本試算適用115年1月1日以後發生之繼承案件；114年以前案件請依當年度規定計算。<br/>
                     ＊免稅額 1,333 萬元（軍警公教人員因公殉職加倍為 2,666 萬元）。<br/>
                     ＊實際稅額以國稅局核定為準，建議申報前諮詢專業顧問。
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ── 所得稅 × 最低稅負試算 ─────────────────────────────
+    // 115年度（2026年所得，2027年5月申報）財政部公告參數
+    const TAX_EXEMPT_NORMAL = 101000, TAX_EXEMPT_SENIOR = 151500;
+    const TAX_STD_SINGLE = 136000, TAX_STD_MARRIED = 272000;
+    const TAX_SALARY_CAP = 227000, TAX_DISABILITY_DED = 227000;
+    const TAX_BASIC_LIVING_PP = 213000;
+    const TAX_PRESCHOOL_FIRST = 150000, TAX_PRESCHOOL_NEXT = 225000;
+    const TAX_EDU_DED = 25000, TAX_LTC_DED = 180000, TAX_SAVINGS_CAP = 270000;
+    const TAX_DIV_CREDIT_RATE = 0.085, TAX_DIV_CREDIT_CAP = 80000, TAX_DIV_SEP_RATE = 0.28;
+    const TAX_AMT_EXEMPT = 7500000, TAX_AMT_OVERSEAS_THRESHOLD = 1000000, TAX_AMT_RATE = 0.2;
+    const TAX_BRACKETS = [
+      { limit:610000, rate:0.05, diff:0 },
+      { limit:1380000, rate:0.12, diff:42700 },
+      { limit:2770000, rate:0.20, diff:153100 },
+      { limit:5190000, rate:0.30, diff:430100 },
+      { limit:Infinity, rate:0.40, diff:949100 },
+    ];
+    const taxCalcBracket = (net) => {
+      if (net <= 0) return 0;
+      for (const b of TAX_BRACKETS) if (net <= b.limit) return net * b.rate - b.diff;
+      return 0;
+    };
+    const taxBracketRate = (net) => {
+      if (net <= 0) return 0.05;
+      for (const b of TAX_BRACKETS) if (net <= b.limit) return b.rate;
+      return 0.4;
+    };
+    const taxComboResult = (returns) => {
+      const dividendTotal = returns.reduce((s, r) => s + r.dividend, 0);
+      const mergeNoCredit = returns.reduce((s, r) => s + Math.max(0, taxCalcBracket(r.netExcl + r.dividend)), 0);
+      const credit = Math.min(dividendTotal * TAX_DIV_CREDIT_RATE, TAX_DIV_CREDIT_CAP);
+      const merge = Math.max(0, mergeNoCredit - credit);
+      const sepBase = returns.reduce((s, r) => s + Math.max(0, taxCalcBracket(r.netExcl)), 0);
+      const sep = sepBase + dividendTotal * TAX_DIV_SEP_RATE;
+      const netDisplay = returns.reduce((s, r) => s + Math.max(0, r.netExcl) + r.dividend, 0);
+      const topRate = Math.max(...returns.map(r => taxBracketRate(r.netExcl + r.dividend)));
+      if (dividendTotal <= 0) return { tax: Math.max(0, sepBase), mode: "—", net: netDisplay, dividendSeparate:false, topRate: Math.max(...returns.map(r=>taxBracketRate(r.netExcl))) };
+      return merge <= sep
+        ? { tax: merge, mode: `合併課稅（抵減 ${Math.round(credit).toLocaleString()}）`, net: netDisplay, dividendSeparate:false, topRate }
+        : { tax: sep, mode: "分開計稅 28%", net: netDisplay, dividendSeparate:true, topRate };
+    };
+
+    function IncomeTaxPlanner({ clientName }) {
+      const [married, setMarried] = useState(false);
+      const [selfSenior, setSelfSenior] = useState(false);
+      const [salaryA, setSalaryA] = useState(1500000);
+      const [dividendA, setDividendA] = useState(0);
+      const [interestA, setInterestA] = useState(0);
+      const [otherA, setOtherA] = useState(0);
+      const [spouseSenior, setSpouseSenior] = useState(false);
+      const [salaryB, setSalaryB] = useState(0);
+      const [dividendB, setDividendB] = useState(300000);
+      const [interestB, setInterestB] = useState(0);
+      const [otherB, setOtherB] = useState(0);
+      const [overseas, setOverseas] = useState(0);
+      const [itemized, setItemized] = useState(false);
+      const [itemizedAmount, setItemizedAmount] = useState(0);
+      const [depNormal, setDepNormal] = useState(0);
+      const [depSenior, setDepSenior] = useState(0);
+      const [depPreschool, setDepPreschool] = useState(0);
+      const [depCollege, setDepCollege] = useState(0);
+      const [depDisability, setDepDisability] = useState(0);
+      const [depLTC, setDepLTC] = useState(0);
+      const [yieldRate, setYieldRate] = useState(6);
+      const [result, setResult] = useState(null);
+
+      const calculate = () => {
+        const exemptA = selfSenior ? TAX_EXEMPT_SENIOR : TAX_EXEMPT_NORMAL;
+        const exemptB = spouseSenior ? TAX_EXEMPT_SENIOR : TAX_EXEMPT_NORMAL;
+        const depExemption = depNormal * TAX_EXEMPT_NORMAL + depSenior * TAX_EXEMPT_SENIOR;
+        const depSpecialBase = depCollege * TAX_EDU_DED + depDisability * TAX_DISABILITY_DED;
+        const preschoolAmt = depPreschool > 0 ? TAX_PRESCHOOL_FIRST + Math.max(0, depPreschool - 1) * TAX_PRESCHOOL_NEXT : 0;
+        const ltcAmt = depLTC * TAX_LTC_DED;
+
+        const standardDeduction = itemized ? itemizedAmount : (married ? TAX_STD_MARRIED : TAX_STD_SINGLE);
+        const salarySpecialA = Math.min(salaryA, TAX_SALARY_CAP);
+        const salarySpecialB = married ? Math.min(salaryB, TAX_SALARY_CAP) : 0;
+        const totalInterest = interestA + (married ? interestB : 0);
+
+        const depCount = depNormal + depSenior;
+        const peopleCount = 1 + (married ? 1 : 0) + depCount;
+        const basicLivingTotal = peopleCount * TAX_BASIC_LIVING_PP;
+
+        // 兩輪試算：分別計算「含長照」與「不含長照」兩種特別扣除額版本，
+        // 再逐一檢視五種計稅組合各自是否符合長照扣除額之排富規定（適用稅率20%以上／股利28%分開計稅／
+        // 基本所得額超過750萬任一項），個別決定該組合是否得減除長照特別扣除額，而非以單一「最有利方案」統一判斷。
+        const computeAll = (depSpecial) => {
+          const householdExemption = exemptA + (married ? exemptB : 0) + depExemption;
+          const householdSalarySpecial = salarySpecialA + salarySpecialB;
+          const comparisonTotal = householdExemption + standardDeduction + householdSalarySpecial + depSpecial;
+          const basicLivingDiff = Math.max(0, basicLivingTotal - comparisonTotal);
+          const savingsDedTotal = Math.min(totalInterest, TAX_SAVINGS_CAP);
+
+          const combos = [];
+          {
+            const netExcl = salaryA + interestA + otherA + (married ? salaryB + interestB + otherB : 0) - exemptA - (married ? exemptB : 0)
+              - depExemption - standardDeduction - salarySpecialA - salarySpecialB - depSpecial - savingsDedTotal - basicLivingDiff;
+            const r = taxComboResult([{ netExcl, dividend: dividendA + (married ? dividendB : 0) }]);
+            combos.push({ key: "c1", label: married ? "全戶合併" : "單身合併", net: r.net, mode: r.mode, tax: r.tax, topRate:r.topRate, dividendSeparate:r.dividendSeparate });
+          }
+          let mergedNetBase = salaryA + interestA + otherA + (married ? salaryB + interestB + otherB : 0) - exemptA - (married ? exemptB : 0)
+            - depExemption - standardDeduction - salarySpecialA - salarySpecialB - depSpecial - savingsDedTotal - basicLivingDiff;
+
+          if (married) {
+            const splitSalary = (who) => {
+              const A = who === "A";
+              const sVal = A ? salaryA : salaryB, sExempt = A ? exemptA : exemptB, sSpecial = Math.min(sVal, TAX_SALARY_CAP);
+              const netSplit = sVal - sExempt - sSpecial;
+              const remSalary = A ? salaryB : salaryA, remOther = otherA + otherB, remInterest = interestA + interestB;
+              const remExempt = (A ? exemptB : exemptA) + depExemption;
+              const remSpecial = Math.min(remSalary, TAX_SALARY_CAP);
+              const remSavingsDed = Math.min(remInterest, TAX_SAVINGS_CAP);
+              const netRem = remSalary + remOther + remInterest - remExempt - standardDeduction - remSpecial - depSpecial - remSavingsDed - basicLivingDiff;
+              return taxComboResult([{ netExcl: netSplit, dividend: 0 }, { netExcl: netRem, dividend: dividendA + dividendB }]);
+            };
+            const c2 = splitSalary("A"); combos.push({ key: "c2", label: "本人薪資分開計稅", net: c2.net, mode: c2.mode, tax: c2.tax, topRate:c2.topRate, dividendSeparate:c2.dividendSeparate });
+            const c3 = splitSalary("B"); combos.push({ key: "c3", label: "配偶薪資分開計稅", net: c3.net, mode: c3.mode, tax: c3.tax, topRate:c3.topRate, dividendSeparate:c3.dividendSeparate });
+
+            const splitAll = (who) => {
+              const A = who === "A";
+              const sSalary = A ? salaryA : salaryB, sOther = A ? otherA : otherB, sInterest = A ? interestA : interestB, sDiv = A ? dividendA : dividendB;
+              const sExempt = A ? exemptA : exemptB, sSpecial = Math.min(sSalary, TAX_SALARY_CAP);
+              const sSavingsDed = Math.min(sInterest, TAX_SAVINGS_CAP);
+              const netSplit = sSalary + sOther + sInterest - sExempt - sSpecial - sSavingsDed;
+              const rSalary = A ? salaryB : salaryA, rOther = A ? otherB : otherA, rInterest = A ? interestB : interestA, rDiv = A ? dividendB : dividendA;
+              const rExempt = (A ? exemptB : exemptA) + depExemption;
+              const rSpecial = Math.min(rSalary, TAX_SALARY_CAP);
+              const rSavingsDed = Math.min(rInterest, Math.max(0, TAX_SAVINGS_CAP - sSavingsDed));
+              const netRem = rSalary + rOther + rInterest - rExempt - standardDeduction - rSpecial - depSpecial - rSavingsDed - basicLivingDiff;
+              return taxComboResult([{ netExcl: netSplit, dividend: sDiv }, { netExcl: netRem, dividend: rDiv }]);
+            };
+            const c4 = splitAll("A"); combos.push({ key: "c4", label: "本人各類所得分開計稅", net: c4.net, mode: c4.mode, tax: c4.tax, topRate:c4.topRate, dividendSeparate:c4.dividendSeparate });
+            const c5 = splitAll("B"); combos.push({ key: "c5", label: "配偶各類所得分開計稅", net: c5.net, mode: c5.mode, tax: c5.tax, topRate:c5.topRate, dividendSeparate:c5.dividendSeparate });
+          }
+          const mergedNetWithDividend = Math.max(0, mergedNetBase) + dividendA + (married ? dividendB : 0);
+          const overseasIncluded = overseas >= TAX_AMT_OVERSEAS_THRESHOLD ? overseas : 0;
+          const basicIncome = mergedNetWithDividend + overseasIncluded;
+          const basicTax = Math.max(0, (basicIncome - TAX_AMT_EXEMPT) * TAX_AMT_RATE);
+          return { combos, mergedNetWithDividend, overseasIncluded, basicIncome, basicTax };
+        };
+
+        const depSpecialFull = depSpecialBase + preschoolAmt + ltcAmt;
+        const depSpecialNoLTC = depSpecialBase + preschoolAmt;
+        const passFull = computeAll(depSpecialFull);
+        const passNo = ltcAmt > 0 ? computeAll(depSpecialNoLTC) : passFull;
+
+        // 逐一組合判斷長照扣除額是否適用排富規定；750萬元門檻採「未計入長照扣除額」之基本所得額判斷，
+        // 避免「納入長照後基本所得額才超標」產生循環判斷問題（財政部：基本所得額超過750萬元不得扣除長照特別扣除額）。
+        const finalCombos = passFull.combos.map((c, i) => {
+          const eligible = ltcAmt <= 0 || (c.topRate < 0.20 && !c.dividendSeparate && passNo.basicIncome <= TAX_AMT_EXEMPT);
+          const chosen = eligible ? c : passNo.combos[i];
+          return { ...chosen, label: c.label, ltcApplied: eligible && ltcAmt > 0 };
+        });
+        const best = finalCombos.reduce((a, b) => (b.tax < a.tax ? b : a), finalCombos[0]);
+        const ltcDisallowed = ltcAmt > 0 && !best.ltcApplied;
+        const pass = best.ltcApplied ? passFull : passNo;
+
+        const generalTax = best.tax;
+        const supplement = Math.max(0, pass.basicTax - generalTax);
+
+        const rate = (yieldRate || 6) / 100;
+        const holderSalary = married ? Math.min(salaryA, salaryB) : salaryA;
+        const isA = !married || salaryA <= salaryB;
+        const holderExempt = isA ? exemptA : exemptB;
+        const netBeforeDivHolder = holderSalary - holderExempt - Math.min(holderSalary, TAX_SALARY_CAP);
+        const room5 = Math.max(0, TAX_BRACKETS[0].limit - Math.max(0, netBeforeDivHolder));
+        const dividendCeiling = room5 + holderExempt;
+        const principalCeiling = dividendCeiling / rate;
+        const overseasRoom = Math.max(0, TAX_AMT_OVERSEAS_THRESHOLD - 1 - overseas);
+        const overseasPrincipal = overseasRoom / rate;
+
+        setResult({ combos: finalCombos, best, mergedNetWithDividend: pass.mergedNetWithDividend,
+          overseasIncluded: pass.overseasIncluded, basicIncome: pass.basicIncome, basicTax: pass.basicTax, generalTax, supplement,
+          dividendCeiling, principalCeiling, overseasRoom, overseasPrincipal, holderLabel: isA ? "本人" : "配偶", ltcDisallowed });
+      };
+
+      useEffect(() => { calculate(); }, []);
+
+      const StepperRow = ({ label, value, setter, max=10 }) => (
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:`1px solid ${C.borderSub}` }}>
+          <span style={{ fontSize:13, fontWeight:600, color:C.text }}>{label}</span>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <button onClick={()=>setter(Math.max(0,value-1))} style={{ width:26, height:26, borderRadius:"50%", border:`1.5px solid ${C.border}`, background:C.bg, fontSize:15, cursor:"pointer", color:C.navyDark }}>−</button>
+            <span style={{ fontSize:14, fontWeight:700, color:C.navyDark, minWidth:16, textAlign:"center" }}>{value}</span>
+            <button onClick={()=>setter(Math.min(max,value+1))} style={{ width:26, height:26, borderRadius:"50%", border:`1.5px solid ${C.border}`, background:C.bg, fontSize:15, cursor:"pointer", color:C.navyDark }}>＋</button>
+          </div>
+        </div>
+      );
+
+      return (
+        <div style={{ maxWidth:960, margin:"0 auto", padding:"24px 16px" }}>
+          <div style={{ marginBottom:20 }}>
+            {clientName && <div style={{ background:C.lavBg, border:`1px solid #d8d2e8`, borderRadius:10, padding:"8px 16px", marginBottom:12, display:"flex", alignItems:"center", gap:8 }}><span style={{ fontSize:12, color:C.lavender }}>👤 客戶</span><span style={{ fontSize:15, fontWeight:700, color:C.navyDeep }}>{clientName}</span><span style={{ fontSize:11, color:C.textLight, marginLeft:"auto" }}>所得稅試算</span></div>}
+            <h2 style={{ fontSize:24, fontWeight:800, color:C.navyDeep, margin:"0 0 6px" }}>所得稅 × 最低稅負快速試算</h2>
+            <p style={{ fontSize:13, color:C.textSub, margin:"0 0 2px" }}>依據 115年度（2026年所得，2027年5月申報）公告參數試算</p>
+          </div>
+
+          <div className="two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, alignItems:"start" }}>
+            {/* 左：輸入 */}
+            <div style={cardStyle}>
+              <Toggle label="已婚（合併申報戶）" value={married} setter={setMarried}/>
+
+              <div style={{ fontSize:12, fontWeight:700, color:C.navyDeep, margin:"14px 0 6px" }}>本人</div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <NumField label="薪資所得" value={salaryA} setter={setSalaryA} unit="元"/>
+                <NumField label="股利所得" value={dividendA} setter={setDividendA} unit="元"/>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <NumField label="利息所得" value={interestA} setter={setInterestA} unit="元"/>
+                <NumField label="其他所得淨額" value={otherA} setter={setOtherA} unit="元"/>
+              </div>
+              <Toggle label="本人年滿70歲" value={selfSenior} setter={setSelfSenior}/>
+
+              {married && (
+                <>
+                  <div style={{ fontSize:12, fontWeight:700, color:C.navyDeep, margin:"14px 0 6px" }}>配偶</div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                    <NumField label="薪資所得" value={salaryB} setter={setSalaryB} unit="元"/>
+                    <NumField label="股利所得" value={dividendB} setter={setDividendB} unit="元"/>
+                  </div>
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                    <NumField label="利息所得" value={interestB} setter={setInterestB} unit="元"/>
+                    <NumField label="其他所得淨額" value={otherB} setter={setOtherB} unit="元"/>
+                  </div>
+                  <Toggle label="配偶年滿70歲" value={spouseSenior} setter={setSpouseSenior}/>
+                </>
+              )}
+              <p style={{ fontSize:11, color:C.textLight, margin:"-4px 0 10px" }}>※其他所得請填依法減除成本費用後之淨額，非收入總額；利息所得將自動試算儲蓄投資特別扣除額（全戶上限27萬元）。</p>
+
+              <NumField label="全戶海外所得合計" value={overseas} setter={setOverseas} unit="元" hint="申報戶全年合計達100萬元，須全數計入基本所得額"/>
+              <Toggle label="採列舉扣除額" sub={itemized?undefined:`未開啟則自動採標準扣除額 ${married?"27.2":"13.6"}萬`} value={itemized} setter={setItemized}/>
+              {itemized && <NumField label="列舉扣除額合計" value={itemizedAmount} setter={setItemizedAmount} unit="元"/>}
+
+              <div style={{ fontSize:12, fontWeight:700, color:C.navyDeep, margin:"16px 0 4px" }}>扶養親屬</div>
+              <p style={{ fontSize:11, color:C.textLight, margin:"0 0 6px" }}>「其中」欄位為前兩項總人數的屬性，請勿另計為新增人數</p>
+              <StepperRow label="一般親屬（未滿70歲）" value={depNormal} setter={setDepNormal}/>
+              <StepperRow label="70歲以上親屬" value={depSenior} setter={setDepSenior}/>
+              <StepperRow label="其中：6歲以下子女" value={depPreschool} setter={setDepPreschool}/>
+              <StepperRow label="其中：大專就學子女" value={depCollege} setter={setDepCollege}/>
+              <StepperRow label="其中：身心障礙證明" value={depDisability} setter={setDepDisability}/>
+              <StepperRow label="其中：長期照顧資格" value={depLTC} setter={setDepLTC}/>
+              <p style={{ fontSize:11, color:C.textLight, margin:"6px 0 0" }}>長照特別扣除額有排富規定：適用稅率20%以上、股利採分開計稅或基本所得額（未計入長照前）逾750萬者不得扣除，系統將自動判斷。</p>
+              <p style={{ fontSize:11, color:C.textLight, margin:"4px 0 0" }}>※本試算未納入房屋租金支出特別扣除額（113年度起每戶上限18萬元，有排富規定），基本生活費差額比較項目亦未含此項；如有租屋自住情形，實際可減除金額請以國稅局公告為準。</p>
+
+              <button onClick={calculate}
+                style={{ width:"100%", marginTop:16, padding:"14px", background:C.navyDeep, border:"none", borderRadius:12, color:"#eee8e0", fontSize:15, fontWeight:700, letterSpacing:"0.1em", cursor:"pointer" }}>
+                開始試算
+              </button>
+            </div>
+
+            {/* 右：結果 */}
+            <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+              {result && (
+                <>
+                  <div style={{ background:C.lavBg, border:"1.5px solid #d8d2e8", borderRadius:14, padding:"22px 24px", boxShadow:"0 2px 8px rgba(100,90,80,0.06)" }}>
+                    <div style={{ fontSize:11, color:C.textSub, marginBottom:6, fontWeight:600, letterSpacing:"0.06em" }}>最適組合・最終應納稅額</div>
+                    <div style={{ fontSize:32, fontWeight:800, color:C.navyDeep, marginBottom:6 }}>NT$ {Math.round(result.generalTax+result.supplement).toLocaleString()}</div>
+                    <div style={{ fontSize:13, color:C.textSub }}>{result.best.label}｜{result.best.mode}</div>
+                  </div>
+
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+                    <Card label="一般所得稅額" value={result.generalTax} bg={C.cardAlt}/>
+                    <Card label="基本稅額" value={result.basicTax} bg={C.cardAlt}/>
+                    <Card label="預估最低稅負差額" value={result.supplement} color={result.supplement>0?C.roseDark:C.sageDark} bg={result.supplement>0?C.roseBg:C.sageBg} border={result.supplement>0?"#ddc8c8":"#c0d4c4"}/>
+                  </div>
+
+                  <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"16px 18px" }}>
+                    <div style={{ fontSize:14, fontWeight:700, color:C.navyDeep, marginBottom:10 }}>五種計稅組合比較</div>
+                    {result.combos.map(c=>(
+                      <div key={c.key} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"7px 0", borderBottom:`1px solid ${C.borderSub}`, background:c.key===result.best.key?C.lavBg:"transparent" }}>
+                        <span style={{ fontSize:12, color:C.text, fontWeight:c.key===result.best.key?700:400 }}>{c.label}{c.key===result.best.key && <span style={{ marginLeft:6, fontSize:10, color:C.lavender }}>✓最低</span>}</span>
+                        <span style={{ fontSize:13, fontWeight:700, color:C.navyDark }}>NT$ {Math.round(c.tax).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ fontSize:12, color:C.text, background:result.supplement>0?C.roseBg:C.sageBg, border:`1px solid ${result.supplement>0?"#ddc8c8":"#c0d4c4"}`, borderRadius:10, padding:"10px 14px", lineHeight:1.7 }}>
+                    {result.supplement>0
+                      ? `基本稅額高於一般所得稅額，須就差額另行繳納最低稅負。`
+                      : result.overseasIncluded>0
+                        ? `基本稅額未超過一般所得稅額，無須另繳最低稅負差額。`
+                        : `全戶海外所得未達100萬元門檻，免計入基本所得額。`}
+                    {result.ltcDisallowed && ` 因觸及排富規定，長照特別扣除額已自動排除，本結果未計入。`}
+                  </div>
+
+                  <div style={{ background:C.sandBg, border:"1px solid #e8d8c4", borderRadius:14, padding:"16px 18px" }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:C.sandDark, marginBottom:10 }}>💡 台股 × 海外配置建議</div>
+                    <div style={{ fontSize:12, color:C.text, lineHeight:1.9 }}>
+                      ・台股股利建議配置於{result.holderLabel}名下，停留5%級距的本金上限約 <b>{Math.round(result.principalCeiling/10000).toLocaleString()} 萬元</b>（股利上限 NT$ {Math.round(result.dividendCeiling).toLocaleString()}）。<br/>
+                      ・全戶海外資產在100萬免申報門檻內，還可再配置本金約 <b>{Math.round(result.overseasPrincipal/10000).toLocaleString()} 萬元</b>。
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:10 }}>
+                      <span style={{ fontSize:11, color:C.textSub }}>假設殖利率</span>
+                      <NumField label="" value={yieldRate} setter={v=>{setYieldRate(v); calculate();}} unit="%" compact inputWidth={60}/>
+                    </div>
+                  </div>
+
+                  <div style={{ fontSize:10, color:C.textLight, lineHeight:1.8 }}>
+                    ＊本頁為快速試算，未涵蓋海外已納稅額扣抵、特定保險給付、有價證券交易所得、非現金捐贈等其他基本所得額項目；各類所得分開計稅之財產交易損失等專屬扣除額仍需個案確認。實際稅額以國稅局核定為準。
                   </div>
                 </>
               )}
@@ -1409,7 +1726,8 @@
           <div style={{ marginBottom:20 }}>
             {clientName && <div style={{ background:C.lavBg, border:`1px solid #d8d2e8`, borderRadius:10, padding:"8px 16px", marginBottom:12, display:"flex", alignItems:"center", gap:8 }}><span style={{ fontSize:12, color:C.lavender }}>👤 客戶</span><span style={{ fontSize:15, fontWeight:700, color:C.navyDeep }}>{clientName}</span><span style={{ fontSize:11, color:C.textLight, marginLeft:"auto" }}>保險缺口診斷</span></div>}
             <h2 style={{ fontSize:24, fontWeight:800, color:C.navyDeep, margin:"0 0 6px" }}>保險缺口診斷</h2>
-            <p style={{ fontSize:13, color:C.textSub, margin:0 }}>依據 54321 完善保障原則・全方位檢視保障缺口</p>
+            <p style={{ fontSize:13, color:C.textSub, margin:0 }}>依據 54321 規劃假設值・全方位檢視保障缺口</p>
+            <p style={{ fontSize:11, color:C.textLight, margin:"4px 0 0" }}>※以下建議金額為顧問規劃假設值，非法律或健保給付之強制標準，請依個人狀況調整</p>
           </div>
 
           <div className="two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, alignItems:"start" }}>
@@ -1512,7 +1830,7 @@
                       <span style={{ fontWeight:800, color:C.navyDeep }}>NT$ {(result.totalLifeNeed/10000).toFixed(0)} 萬</span>
                     </div>
                     <div style={{ display:"flex", justifyContent:"space-between", fontSize:12, padding:"5px 0" }}>
-                      <span style={{ color:C.textSub }}>現有資產＋壽險</span>
+                      <span style={{ color:C.textSub }}>可運用金融資產＋壽險</span>
                       <span style={{ fontWeight:600, color:C.sageDark }}>NT$ {(result.liquidTotal/10000).toFixed(0)} 萬</span>
                     </div>
                     <div style={{ background:result.lifeGap>0?C.roseBg:C.sageBg, border:`1px solid ${result.lifeGap>0?"#ddc8c8":"#c0d4c4"}`, borderRadius:8, padding:"10px 12px", marginTop:8 }}>
@@ -1645,6 +1963,7 @@
           <div style={{ marginBottom:20 }}>
             <h2 style={{ fontSize:24, fontWeight:800, color:C.navyDeep, margin:"0 0 5px" }}>房產活化分析</h2>
             <p style={{ fontSize:13, color:C.textSub, margin:0 }}>輸入客戶資產及規劃參數，自動試算三大配置的現金流與傳承效益</p>
+            <p style={{ fontSize:11, color:C.textLight, margin:"4px 0 0" }}>※現金流試算為「預期投資報酬－貸款成本」之簡化模型，未計入投資波動、稅負、手續費與本金攤還，非保證報酬</p>
           </div>
 
           <div className="two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, alignItems:"start" }}>
@@ -1824,10 +2143,12 @@
     // ── 首頁儀表板 ───────────────────────────────────────
     function HomePage({ onNavigate }) {
       const tools = [
+        { id:"maturity",   icon:"🧭", title:"財務等級測驗",   desc:"人生財務導航・35題健檢・找出現況等級",     color:C.lavender,  bg:C.lavBg,   border:"#d8d2e8" },
+        { id:"tax",        icon:"📋", title:"所得稅試算",     desc:"綜所稅五種計稅組合・最低稅負・投資配置",   color:"#7a6a8a",  bg:"#f3f1f7",  border:"#d8d2e8" },
         { id:"retirement", icon:"📊", title:"退休現況分析",   desc:"勞保勞退・通膨調整・缺口試算・補足方案",   color:C.navyDeep, bg:"#eef2f6", border:"#c8d8e4" },
         { id:"insurance",  icon:"🛡️", title:"保險缺口診斷",   desc:"重大傷病・長照・壽險・家庭責任完整檢視",   color:C.roseDark, bg:C.roseBg,  border:"#ddc8c8" },
         { id:"health",     icon:"🏠", title:"房產活化分析",   desc:"房產貸款・三大配置・月現金流・傳承試算",   color:C.navyDeep, bg:"#eef2f6",  border:"#c8d8e4" },
-        { id:"tax",        icon:"📋", title:"稅務與傳承規劃", desc:"財務目標規劃・資產傳承・稅務優化",         color:"#7a6a8a",  bg:"#f3f1f7",  border:"#d8d2e8" },
+        { id:"legacy",     icon:"🪶", title:"遺贈稅務規劃",   desc:"遺產稅試算・扣除額・生前贈與規劃",         color:C.sandDark, bg:C.sandBg,  border:"#e8d8c4" },
       ];
 
       return (
@@ -1856,23 +2177,9 @@
             </div>
           </div>
 
-          {/* ── 人生財務導航 ── */}
-          <button onClick={()=>onNavigate("maturity")}
-            style={{ width:"calc(100% + 32px)", margin:"0 -16px 16px", textAlign:"left", cursor:"pointer",
-              border:"none", display:"flex", alignItems:"center",
-              justifyContent:"space-between", gap:14, flexWrap:"wrap",
-              background:C.lavBg, padding:"16px 20px" }}>
-            <span style={{ display:"flex", alignItems:"center", gap:8, fontSize:15, fontWeight:700, color:C.navyDeep }}>
-              <span style={{ fontSize:17 }}>🧭</span> 人生財務導航檢視
-            </span>
-            <span style={{ fontSize:14, fontWeight:700, color:C.navyDeep, whiteSpace:"nowrap" }}>
-              財務等級測驗 →
-            </span>
-          </button>
-
           {/* ── 工具卡片 ── */}
           <div style={{ marginBottom:12 }}>
-            <div style={{ fontSize:11, color:C.textLight, letterSpacing:"0.12em", marginBottom:10, fontWeight:500 }}>專業工具</div>
+            <div style={{ fontSize:11, color:C.textLight, letterSpacing:"0.12em", marginBottom:10, fontWeight:500 }}>六大財務工具</div>
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
               {tools.map(tool=>(
                 <button key={tool.id} onClick={()=>onNavigate(tool.id)}
@@ -2380,10 +2687,11 @@
       const navItems = [
         { id:"home",       label:"首頁", icon:"⌂" },
         { id:"maturity",   label:"理財", icon:"🧭" },
+        { id:"tax",        label:"稅務", icon:"📋" },
         { id:"retirement", label:"退休", icon:"📊" },
         { id:"insurance",  label:"保險", icon:"🛡" },
         { id:"health",     label:"房產", icon:"🏠" },
-        { id:"tax",        label:"稅務", icon:"📋" },
+        { id:"legacy",     label:"遺贈", icon:"🪶" },
       ];
 
       return (
@@ -2418,7 +2726,8 @@
             {page==="cashflow"   && <ComingSoon title="收支健診" icon="💰" desc="此功能即將推出。" />}
             {page==="assets"     && <ComingSoon title="資產負債分析" icon="🏦" desc="此功能即將推出。" />}
             {page==="insurance"  && <InsuranceGap clientName={clientName} salary={sharedSalary}/>}
-            {page==="tax"        && <EstateTax clientName={clientName}/>}
+            {page==="tax"        && <IncomeTaxPlanner clientName={clientName}/>}
+            {page==="legacy"     && <EstateTax clientName={clientName}/>}
           </div>
 
           {/* 底部導覽列 */}
