@@ -32,6 +32,10 @@
     @media (max-width: 600px) {
       .two-col { grid-template-columns: 1fr !important; }
     }
+    @media (max-width: 480px) {
+      .field-pair { grid-template-columns: 1fr !important; }
+      .stat-triple { grid-template-columns: 1fr !important; }
+    }
     @media print {
       .no-print { display: none !important; }
       body { background: white !important; }
@@ -1145,17 +1149,17 @@
             <p style={{ fontSize:14, color:C.textSub, margin:"0 0 2px" }}>依據 115年度（2026年所得，2027年5月申報）公告參數試算</p>
           </div>
 
-          <div className="two-col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16, alignItems:"start" }}>
+          <div className="main-grid" style={{ display:"grid", gridTemplateColumns:"minmax(300px, 400px) 1fr", gap:16, alignItems:"start" }}>
             {/* 左：輸入 */}
             <div style={cardStyle}>
               <Toggle label="已婚（合併申報戶）" value={married} setter={setMarried}/>
 
               <div style={{ fontSize:13, fontWeight:700, color:C.navyDeep, margin:"14px 0 6px" }}>本人</div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              <div className="field-pair" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                 <NumField label="薪資所得" value={salaryA} setter={setSalaryA} unit="元"/>
                 <NumField label="股利所得" value={dividendA} setter={setDividendA} unit="元"/>
               </div>
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              <div className="field-pair" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                 <NumField label="利息所得" value={interestA} setter={setInterestA} unit="元"/>
                 <NumField label="其他所得淨額" value={otherA} setter={setOtherA} unit="元"/>
               </div>
@@ -1164,11 +1168,11 @@
               {married && (
                 <>
                   <div style={{ fontSize:13, fontWeight:700, color:C.navyDeep, margin:"14px 0 6px" }}>配偶</div>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                  <div className="field-pair" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                     <NumField label="薪資所得" value={salaryB} setter={setSalaryB} unit="元"/>
                     <NumField label="股利所得" value={dividendB} setter={setDividendB} unit="元"/>
                   </div>
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                  <div className="field-pair" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                     <NumField label="利息所得" value={interestB} setter={setInterestB} unit="元"/>
                     <NumField label="其他所得淨額" value={otherB} setter={setOtherB} unit="元"/>
                   </div>
@@ -1228,7 +1232,7 @@
                     ) : null;
                   })()}
 
-                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+                  <div className="stat-triple" style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
                     <Card label="一般所得稅額" value={result.generalTax} bg={C.cardAlt}/>
                     <Card label="基本稅額" value={result.basicTax} bg={C.cardAlt}/>
                     <Card label="預估最低稅負差額" value={result.supplement} color={result.supplement>0?C.roseDark:C.sageDark} bg={result.supplement>0?C.roseBg:C.sageBg} border={result.supplement>0?"#ddc8c8":"#c0d4c4"}/>
